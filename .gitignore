@@ -54,3 +54,6 @@ stop.command
 pet-app/README.md
 ruoyi-ui/README.md
 ruoyi-ui/bin/
+
+# Local full database dump; publish only sql/ruoyi_pet_adopt_minimal.sql
+sql/ruoyi_pet_adopt.sql
