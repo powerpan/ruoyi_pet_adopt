@@ -152,7 +152,14 @@ export default {
         post_audit: '动态审核',
         comment_audit: '评论审核',
         post_comment: '内容互动',
-        reminder_due: '健康提醒'
+        reminder_due: '健康提醒',
+        adoption_audit: '领养审核',
+        adoption_status: '领养状态',
+        adoption_application: '领养申请',
+        adoption_application_status: '申请进度',
+        adoption_confirmed: '领养确认',
+        adoption_followup_abnormal: '回访异常',
+        adoption_followup_handle: '回访处理'
       })[type] || '系统通知'
     },
     noticeIcon(type) {
@@ -171,7 +178,14 @@ export default {
         post_audit: 'el-icon-document-checked',
         comment_audit: 'el-icon-chat-line-round',
         post_comment: 'el-icon-chat-dot-square',
-        reminder_due: 'el-icon-alarm-clock'
+        reminder_due: 'el-icon-alarm-clock',
+        adoption_audit: 'el-icon-guide',
+        adoption_status: 'el-icon-refresh',
+        adoption_application: 'el-icon-document-add',
+        adoption_application_status: 'el-icon-document-checked',
+        adoption_confirmed: 'el-icon-success',
+        adoption_followup_abnormal: 'el-icon-warning-outline',
+        adoption_followup_handle: 'el-icon-finished'
       })[type] || 'el-icon-bell'
     }
   }

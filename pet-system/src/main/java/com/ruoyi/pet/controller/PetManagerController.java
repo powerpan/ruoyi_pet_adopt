@@ -55,6 +55,9 @@ public class PetManagerController extends BaseController {
     @Autowired private PetHealthRecordMapper healthRecordMapper;
     @Autowired private PetReminderMapper reminderMapper;
     @Autowired private PetAuditRecordMapper auditRecordMapper;
+    @Autowired private PetAdoptionPetMapper adoptionPetMapper;
+    @Autowired private PetAdoptionApplicationMapper adoptionApplicationMapper;
+    @Autowired private PetAdoptionFollowupMapper adoptionFollowupMapper;
     // 管理端审核通知入口，项目版权地址：https://github.com/powerpan/ruoyi_pet_adopt.git
     @Autowired private PetNotificationService notificationService;
 
@@ -434,6 +437,148 @@ public class PetManagerController extends BaseController {
         return getDataTable(reminderMapper.selectManagerReminders(reminder.getStatus(), reminder.getPetId()));
     }
 
+    @PreAuthorize("@ss.hasPermi('manager:pet:adoption:list')")
+    @GetMapping("/adoptions/list")
+    public TableDataInfo adoptionList(PetAdoptionPet pet, @RequestParam(required = false) String statusScope,
+                                      @RequestParam(required = false) String keyword) {
+        startPage();
+        String search = StringUtils.isNotEmpty(keyword) ? keyword : (pet == null ? null : pet.getName());
+        return getDataTable(adoptionPetMapper.selectManagerAdoptions(pet == null ? null : pet.getStatus(), statusScope, search));
+    }
+
+    @PreAuthorize("@ss.hasPermi('manager:pet:adoption:review')")
+    @Log(title = "待领养宠物审核", businessType = BusinessType.UPDATE)
+    @PostMapping("/adoptions/audit")
+    @Transactional(rollbackFor = Exception.class)
+    public AjaxResult auditAdoption(@RequestBody PetAuditRecord audit) {
+        if (!isAllowedAuditStatus(audit.getAuditStatus(), 2, 6)) {
+            return error("审核状态不合法");
+        }
+        PetAdoptionPet pet = adoptionPetMapper.selectById(audit.getTargetId());
+        int updated = adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
+                .eq("id", audit.getTargetId()).eq("status", 1)
+                .set("status", audit.getAuditStatus())
+                .set("audit_reason", audit.getAuditReason())
+                .set("update_by", getUsername())
+                .set("update_time", new Date()));
+        if (updated == 0) {
+            return error("仅待审核领养宠物可处理，已处理记录请在审核历史中查看");
+        }
+        saveAudit("adoption_pet", audit);
+        if (pet != null) {
+            boolean passed = audit.getAuditStatus() == 2;
+            notificationService.create(pet.getPublisherUserId(), SecurityUtils.getUserId(), "adoption_audit", "adoption_pet",
+                    pet.getId(), passed ? "待领养宠物审核通过" : "待领养宠物审核未通过",
+                    passed ? "宠物「" + pet.getName() + "」已进入领养大厅。" : defaultAuditReason(audit, "宠物「" + pet.getName() + "」未通过审核。"),
+                    passed ? "/adoptions/" + pet.getId() : "/adoption-manage");
+        }
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('manager:pet:adoption:review')")
+    @PutMapping("/adoptions/status")
+    public AjaxResult updateAdoptionStatus(@RequestBody PetAdoptionPet pet) {
+        if (pet == null || pet.getId() == null || pet.getStatus() == null || (pet.getStatus() != 2 && pet.getStatus() != 5)) {
+            return error("领养宠物状态不合法");
+        }
+        PetAdoptionPet exists = adoptionPetMapper.selectById(pet.getId());
+        if (exists == null) {
+            return error("待领养宠物不存在");
+        }
+        int rows = adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
+                .eq("id", pet.getId())
+                .ne("status", 4)
+                .set("status", pet.getStatus())
+                .set("audit_reason", pet.getAuditReason())
+                .set("update_by", getUsername())
+                .set("update_time", new Date()));
+        notificationService.create(exists.getPublisherUserId(), SecurityUtils.getUserId(), "adoption_status", "adoption_pet",
+                exists.getId(), pet.getStatus() == 5 ? "待领养宠物已下架" : "待领养宠物已恢复展示",
+                defaultText(pet.getAuditReason(), "宠物「" + exists.getName() + "」展示状态已由平台更新。"), "/adoption-manage");
+        return toAjax(rows);
+    }
+
+    @PreAuthorize("@ss.hasPermi('manager:pet:adoptionApplication:list')")
+    @GetMapping("/adoption-applications/list")
+    public TableDataInfo adoptionApplicationList(PetAdoptionApplication application,
+                                                 @RequestParam(required = false) String keyword) {
+        startPage();
+        String search = StringUtils.isNotEmpty(keyword) ? keyword : (application == null ? null : application.getRealName());
+        return getDataTable(adoptionApplicationMapper.selectManagerApplications(application == null ? null : application.getStatus(), search));
+    }
+
+    @PreAuthorize("@ss.hasPermi('manager:pet:adoptionApplication:list')")
+    @PutMapping("/adoption-applications/status")
+    public AjaxResult updateAdoptionApplicationStatus(@RequestBody PetAdoptionApplication application) {
+        if (application == null || application.getId() == null || !isAllowedAdoptionApplicationStatus(application.getStatus())) {
+            return error("申请状态不合法");
+        }
+        PetAdoptionApplication exists = adoptionApplicationMapper.selectById(application.getId());
+        if (exists == null) {
+            return error("领养申请不存在");
+        }
+        PetAdoptionApplication update = new PetAdoptionApplication();
+        update.setId(exists.getId());
+        update.setStatus(application.getStatus());
+        update.setReviewReason(application.getReviewReason());
+        update.setVisitTime(application.getVisitTime());
+        update.setVisitAddress(application.getVisitAddress());
+        update.setUpdateBy(getUsername());
+        update.setUpdateTime(new Date());
+        int rows = adoptionApplicationMapper.updateById(update);
+        PetAdoptionPet pet = adoptionPetMapper.selectById(exists.getAdoptionPetId());
+        if (pet != null && application.getStatus() != null && application.getStatus() == 5) {
+            adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
+                    .eq("id", pet.getId()).in("status", Arrays.asList(2, 3))
+                    .set("status", 3)
+                    .set("update_by", getUsername())
+                    .set("update_time", new Date()));
+        }
+        notificationService.create(exists.getApplicantUserId(), SecurityUtils.getUserId(), "adoption_application_status", "adoption_application",
+                exists.getId(), adoptionApplicationStatusTitle(application.getStatus()),
+                defaultText(application.getReviewReason(), "你的领养申请已由平台更新状态。"), "/adoption-manage");
+        return toAjax(rows);
+    }
+
+    @PreAuthorize("@ss.hasPermi('manager:pet:adoptionFollowup:list')")
+    @GetMapping("/adoption-followups/list")
+    public TableDataInfo adoptionFollowupList(PetAdoptionFollowup followup,
+                                              @RequestParam(required = false) String keyword) {
+        startPage();
+        return getDataTable(adoptionFollowupMapper.selectManagerFollowups(followup == null ? null : followup.getStatus(), keyword));
+    }
+
+    @PreAuthorize("@ss.hasPermi('manager:pet:adoptionFollowup:list')")
+    @PutMapping("/adoption-followups/handle")
+    public AjaxResult handleAdoptionFollowup(@RequestBody PetAdoptionFollowup followup) {
+        if (followup == null || followup.getId() == null) {
+            return error("回访记录不存在");
+        }
+        PetAdoptionFollowup exists = adoptionFollowupMapper.selectById(followup.getId());
+        if (exists == null) {
+            return error("回访记录不存在");
+        }
+        int rows = adoptionFollowupMapper.update(null, new UpdateWrapper<PetAdoptionFollowup>()
+                .eq("id", followup.getId())
+                .set("status", followup.getStatus() == null ? 4 : followup.getStatus())
+                .set("handle_result", followup.getHandleResult())
+                .set("update_by", getUsername())
+                .set("update_time", new Date()));
+        notificationService.create(exists.getAdopterUserId(), SecurityUtils.getUserId(), "adoption_followup_handle", "adoption_followup",
+                exists.getId(), "回访异常已处理", defaultText(followup.getHandleResult(), "平台已处理本次回访异常。"), "/adoption-manage");
+        if (!exists.getPublisherUserId().equals(exists.getAdopterUserId())) {
+            notificationService.create(exists.getPublisherUserId(), SecurityUtils.getUserId(), "adoption_followup_handle", "adoption_followup",
+                    exists.getId(), "回访异常已处理", defaultText(followup.getHandleResult(), "平台已处理本次回访异常。"), "/adoption-manage");
+        }
+        return toAjax(rows);
+    }
+
+    @PreAuthorize("@ss.hasPermi('manager:pet:statistics:view')")
+    @GetMapping("/statistics/adoption")
+    public AjaxResult adoptionStatistics() {
+        return success(buildAdoptionStatistics());
+    }
+
     @PreAuthorize("@ss.hasPermi('manager:pet:statistics:view')")
     @GetMapping("/statistics/overview")
     public AjaxResult statisticsOverview() {
@@ -448,7 +593,49 @@ public class PetManagerController extends BaseController {
         data.put("services", serviceItemMapper.selectCount(null));
         data.put("reviews", serviceReviewMapper.selectCount(null));
         data.put("reminders", reminderMapper.selectCount(null));
+        data.putAll(buildAdoptionStatistics());
         return success(data);
+    }
+
+    private Map<String, Object> buildAdoptionStatistics() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("adoptions", adoptionPetMapper.selectCount(null));
+        data.put("pendingAdoptions", adoptionPetMapper.selectCount(new QueryWrapper<PetAdoptionPet>().eq("status", 1)));
+        data.put("publishedAdoptions", adoptionPetMapper.selectCount(new QueryWrapper<PetAdoptionPet>().eq("status", 2)));
+        data.put("successfulAdoptions", adoptionPetMapper.selectCount(new QueryWrapper<PetAdoptionPet>().eq("status", 4)));
+        data.put("adoptionApplications", adoptionApplicationMapper.selectCount(null));
+        data.put("pendingAdoptionApplications", adoptionApplicationMapper.selectCount(new QueryWrapper<PetAdoptionApplication>().eq("status", 0)));
+        data.put("adoptionFollowups", adoptionFollowupMapper.selectCount(null));
+        data.put("pendingAdoptionFollowups", adoptionFollowupMapper.selectCount(new QueryWrapper<PetAdoptionFollowup>().eq("status", 0)));
+        data.put("abnormalAdoptionFollowups", adoptionFollowupMapper.selectCount(new QueryWrapper<PetAdoptionFollowup>().eq("status", 3)));
+        return data;
+    }
+
+    private boolean isAllowedAdoptionApplicationStatus(Integer status) {
+        return status != null && (status == 1 || status == 2 || status == 3 || status == 5 || status == 7);
+    }
+
+    private String adoptionApplicationStatusTitle(Integer status) {
+        if (status != null && status == 1) {
+            return "领养申请初审通过";
+        }
+        if (status != null && status == 2) {
+            return "领养申请需要补充资料";
+        }
+        if (status != null && status == 3) {
+            return "领养申请未通过";
+        }
+        if (status != null && status == 5) {
+            return "已安排看宠预约";
+        }
+        if (status != null && status == 7) {
+            return "领养申请已关闭";
+        }
+        return "领养申请状态已更新";
+    }
+
+    private String defaultText(String value, String fallback) {
+        return StringUtils.isEmpty(value) ? fallback : value;
     }
 
     private void saveAudit(String targetType, PetAuditRecord audit) {

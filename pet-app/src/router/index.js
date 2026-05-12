@@ -18,6 +18,9 @@ const routes = [
     component: Layout,
     children: [
       { path: '', name: 'Home', component: () => import('@/views/Home') },
+      { path: 'adoptions', name: 'Adoptions', component: () => import('@/views/Adoptions') },
+      { path: 'adoptions/:id', name: 'AdoptionDetail', component: () => import('@/views/AdoptionDetail') },
+      { path: 'adoption-manage', name: 'AdoptionManage', component: () => import('@/views/AdoptionManage'), meta: { auth: true } },
       { path: 'topics', name: 'Topics', component: () => import('@/views/Topics') },
       { path: 'posts/:id', name: 'PostDetail', component: () => import('@/views/PostDetail') },
       { path: 'publish', name: 'PostPublish', component: () => import('@/views/PostPublish'), meta: { auth: true } },

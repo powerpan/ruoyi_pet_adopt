@@ -27,3 +27,7 @@
 - 默认上传目录：`/Users/ericpan/ruoyi_pet_adopt/uploadPath`
 
 初始化 SQL 位于 `sql/ruoyi_pet_adopt.sql`。
+
+## 项目文档
+
+- [宠物领养平台需求分析与系统设计](docs/宠物领养平台需求分析与系统设计.md)

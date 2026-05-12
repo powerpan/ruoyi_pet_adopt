@@ -4,8 +4,9 @@
       <div class="hero-copy">
         <div class="eyebrow">Pet Community</div>
         <h1>今日养宠动态</h1>
-        <p>用帖子沉淀经验，用话题聚合问题，用附近服务完成线下对接。</p>
+        <p>用领养大厅完成救助对接，用帖子沉淀经验，用附近服务衔接后续照护。</p>
         <div class="hero-actions">
+          <el-button type="primary" icon="el-icon-guide" @click="$router.push('/adoptions')">进入领养大厅</el-button>
           <el-button type="primary" icon="el-icon-edit-outline" @click="$router.push('/publish')">发布动态</el-button>
           <el-button icon="el-icon-location-outline" @click="$router.push('/services')">查找服务</el-button>
         </div>
@@ -91,6 +92,7 @@ export default {
       posts: [],
       loading: false,
       quickEntries: [
+        { label: '领养大厅', path: '/adoptions', icon: 'el-icon-guide' },
         { label: '话题广场', path: '/topics', icon: 'el-icon-collection-tag' },
         { label: '宠物档案', path: '/pets', icon: 'el-icon-document' },
         { label: '健康档案', path: '/health', icon: 'el-icon-first-aid-kit' },

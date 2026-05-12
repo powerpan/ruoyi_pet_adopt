@@ -473,17 +473,23 @@ INSERT INTO `sys_menu` (`menu_id`, `menu_name`, `parent_id`, `order_num`, `path`
 (3001, '用户主页', 3000, 1, 'profile', 'pet/profile/index', '', 1, 0, 'C', '0', '0', 'manager:pet:profile:list', 'user', 'admin', NOW(), '', NULL, ''),
 (3013, '博主认证', 3000, 2, 'blogger', 'pet/blogger/index', '', 1, 0, 'C', '0', '0', 'manager:pet:profile:review', 'peoples', 'admin', NOW(), '', NULL, ''),
 (3002, '宠物档案', 3000, 3, 'pet', 'pet/pet/index', '', 1, 0, 'C', '0', '0', 'manager:pet:pet:list', 'guide', 'admin', NOW(), '', NULL, ''),
-(3003, '帖子审核', 3000, 4, 'post', 'pet/post/index', '', 1, 0, 'C', '0', '0', 'manager:pet:post:list', 'documentation', 'admin', NOW(), '', NULL, ''),
-(3004, '话题管理', 3000, 5, 'topic', 'pet/topic/index', '', 1, 0, 'C', '0', '0', 'manager:pet:topic:list', 'tree', 'admin', NOW(), '', NULL, ''),
-(3005, '评论审核', 3000, 6, 'comment', 'pet/comment/index', '', 1, 0, 'C', '0', '0', 'manager:pet:comment:list', 'message', 'admin', NOW(), '', NULL, ''),
-(3006, '商家审核', 3000, 7, 'merchant', 'pet/merchant/index', '', 1, 0, 'C', '0', '0', 'manager:pet:merchant:list', 'peoples', 'admin', NOW(), '', NULL, ''),
-(3007, '服务管理', 3000, 8, 'service', 'pet/service/index', '', 1, 0, 'C', '0', '0', 'manager:pet:service:list', 'shopping', 'admin', NOW(), '', NULL, ''),
-(3008, '服务咨询', 3000, 9, 'serviceRequest', 'pet/serviceRequest/index', '', 1, 0, 'C', '0', '0', 'manager:pet:serviceRequest:list', 'form', 'admin', NOW(), '', NULL, ''),
-(3009, '服务评价', 3000, 10, 'review', 'pet/review/index', '', 1, 0, 'C', '0', '0', 'manager:pet:review:list', 'star', 'admin', NOW(), '', NULL, ''),
-(3010, '健康档案', 3000, 11, 'health', 'pet/health/index', '', 1, 0, 'C', '0', '0', 'manager:pet:health:list', 'clipboard', 'admin', NOW(), '', NULL, ''),
-(3011, '到期提醒', 3000, 12, 'reminder', 'pet/reminder/index', '', 1, 0, 'C', '0', '0', 'manager:pet:reminder:list', 'date', 'admin', NOW(), '', NULL, ''),
-(3012, '数据统计', 3000, 13, 'statistics', 'pet/statistics/index', '', 1, 0, 'C', '0', '0', 'manager:pet:statistics:view', 'chart', 'admin', NOW(), '', NULL, ''),
+(3014, '领养审核', 3000, 4, 'adoption', 'pet/adoption/index', '', 1, 0, 'C', '0', '0', 'manager:pet:adoption:list', 'guide', 'admin', NOW(), '', NULL, ''),
+(3015, '领养申请', 3000, 5, 'adoptionApplication', 'pet/adoptionApplication/index', '', 1, 0, 'C', '0', '0', 'manager:pet:adoptionApplication:list', 'form', 'admin', NOW(), '', NULL, ''),
+(3016, '领养回访', 3000, 6, 'adoptionFollowup', 'pet/adoptionFollowup/index', '', 1, 0, 'C', '0', '0', 'manager:pet:adoptionFollowup:list', 'date', 'admin', NOW(), '', NULL, ''),
+(3003, '帖子审核', 3000, 7, 'post', 'pet/post/index', '', 1, 0, 'C', '0', '0', 'manager:pet:post:list', 'documentation', 'admin', NOW(), '', NULL, ''),
+(3004, '话题管理', 3000, 8, 'topic', 'pet/topic/index', '', 1, 0, 'C', '0', '0', 'manager:pet:topic:list', 'tree', 'admin', NOW(), '', NULL, ''),
+(3005, '评论审核', 3000, 9, 'comment', 'pet/comment/index', '', 1, 0, 'C', '0', '0', 'manager:pet:comment:list', 'message', 'admin', NOW(), '', NULL, ''),
+(3006, '商家审核', 3000, 10, 'merchant', 'pet/merchant/index', '', 1, 0, 'C', '0', '0', 'manager:pet:merchant:list', 'peoples', 'admin', NOW(), '', NULL, ''),
+(3007, '服务管理', 3000, 11, 'service', 'pet/service/index', '', 1, 0, 'C', '0', '0', 'manager:pet:service:list', 'shopping', 'admin', NOW(), '', NULL, ''),
+(3008, '服务咨询', 3000, 12, 'serviceRequest', 'pet/serviceRequest/index', '', 1, 0, 'C', '0', '0', 'manager:pet:serviceRequest:list', 'form', 'admin', NOW(), '', NULL, ''),
+(3009, '服务评价', 3000, 13, 'review', 'pet/review/index', '', 1, 0, 'C', '0', '0', 'manager:pet:review:list', 'star', 'admin', NOW(), '', NULL, ''),
+(3010, '健康档案', 3000, 14, 'health', 'pet/health/index', '', 1, 0, 'C', '0', '0', 'manager:pet:health:list', 'clipboard', 'admin', NOW(), '', NULL, ''),
+(3011, '到期提醒', 3000, 15, 'reminder', 'pet/reminder/index', '', 1, 0, 'C', '0', '0', 'manager:pet:reminder:list', 'date', 'admin', NOW(), '', NULL, ''),
+(3012, '数据统计', 3000, 16, 'statistics', 'pet/statistics/index', '', 1, 0, 'C', '0', '0', 'manager:pet:statistics:view', 'chart', 'admin', NOW(), '', NULL, ''),
 (3101, '博主认证审核', 3013, 1, '#', '', '', 1, 0, 'F', '0', '0', 'manager:pet:profile:review', '#', 'admin', NOW(), '', NULL, ''),
+(3112, '领养审核操作', 3014, 1, '#', '', '', 1, 0, 'F', '0', '0', 'manager:pet:adoption:review', '#', 'admin', NOW(), '', NULL, ''),
+(3113, '领养申请处理', 3015, 1, '#', '', '', 1, 0, 'F', '0', '0', 'manager:pet:adoptionApplication:list', '#', 'admin', NOW(), '', NULL, ''),
+(3114, '领养回访处理', 3016, 1, '#', '', '', 1, 0, 'F', '0', '0', 'manager:pet:adoptionFollowup:list', '#', 'admin', NOW(), '', NULL, ''),
 (3102, '话题新增', 3004, 1, '#', '', '', 1, 0, 'F', '0', '0', 'manager:pet:topic:add', '#', 'admin', NOW(), '', NULL, ''),
 (3103, '话题修改', 3004, 2, '#', '', '', 1, 0, 'F', '0', '0', 'manager:pet:topic:edit', '#', 'admin', NOW(), '', NULL, ''),
 (3104, '话题删除', 3004, 3, '#', '', '', 1, 0, 'F', '0', '0', 'manager:pet:topic:remove', '#', 'admin', NOW(), '', NULL, ''),
@@ -496,7 +502,7 @@ INSERT INTO `sys_menu` (`menu_id`, `menu_name`, `parent_id`, `order_num`, `path`
 (3110, '服务删除', 3007, 3, '#', '', '', 1, 0, 'F', '0', '0', 'manager:pet:service:remove', '#', 'admin', NOW(), '', NULL, '');
 
 INSERT INTO `sys_role_menu` (`role_id`, `menu_id`) VALUES
-(2, 3000),(2, 3001),(2, 3013),(2, 3002),(2, 3003),(2, 3004),(2, 3005),(2, 3006),(2, 3007),(2, 3008),(2, 3009),(2, 3010),(2, 3011),(2, 3012),(2, 3101),(2, 3102),(2, 3103),(2, 3104),(2, 3105),(2, 3111),(2, 3106),(2, 3107),(2, 3108),(2, 3109),(2, 3110);
+(2, 3000),(2, 3001),(2, 3013),(2, 3002),(2, 3014),(2, 3015),(2, 3016),(2, 3003),(2, 3004),(2, 3005),(2, 3006),(2, 3007),(2, 3008),(2, 3009),(2, 3010),(2, 3011),(2, 3012),(2, 3101),(2, 3112),(2, 3113),(2, 3114),(2, 3102),(2, 3103),(2, 3104),(2, 3105),(2, 3111),(2, 3106),(2, 3107),(2, 3108),(2, 3109),(2, 3110);
 
 DROP TABLE IF EXISTS `pet_user_profile`;
 CREATE TABLE `pet_user_profile` (
@@ -531,6 +537,84 @@ CREATE TABLE `pet_profile` (
   `create_by` varchar(64) DEFAULT '', `create_time` datetime DEFAULT NULL, `update_by` varchar(64) DEFAULT '', `update_time` datetime DEFAULT NULL, `remark` varchar(500) DEFAULT NULL,
   PRIMARY KEY (`id`), KEY `idx_pet_profile_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='宠物档案';
+
+DROP TABLE IF EXISTS `pet_adoption_pet`;
+CREATE TABLE `pet_adoption_pet` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `publisher_user_id` bigint NOT NULL COMMENT '发布人',
+  `publisher_type` varchar(32) DEFAULT 'personal' COMMENT 'personal/merchant/platform',
+  `merchant_id` bigint DEFAULT NULL COMMENT '机构发布时关联商家',
+  `name` varchar(64) NOT NULL,
+  `species` varchar(32) DEFAULT '',
+  `breed` varchar(64) DEFAULT '',
+  `gender` varchar(16) DEFAULT '',
+  `age_months` int DEFAULT NULL,
+  `city` varchar(64) DEFAULT '',
+  `district` varchar(64) DEFAULT '',
+  `cover_url` varchar(255) DEFAULT '',
+  `image_urls` text,
+  `health_status` varchar(255) DEFAULT '',
+  `vaccine_status` varchar(255) DEFAULT '',
+  `neutered` tinyint DEFAULT 0,
+  `personality` varchar(500) DEFAULT '',
+  `source_desc` varchar(500) DEFAULT '',
+  `adoption_requirements` varchar(1000) DEFAULT '',
+  `status` tinyint DEFAULT 1 COMMENT '0草稿 1待审核 2已发布 3已预约 4已领养 5已下架 6拒绝',
+  `audit_reason` varchar(500) DEFAULT '',
+  `adopted_user_id` bigint DEFAULT NULL,
+  `adopted_time` datetime DEFAULT NULL,
+  `create_by` varchar(64) DEFAULT '', `create_time` datetime DEFAULT NULL, `update_by` varchar(64) DEFAULT '', `update_time` datetime DEFAULT NULL, `remark` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_pet_adoption_pet_public` (`status`, `city`, `species`, `create_time`),
+  KEY `idx_pet_adoption_pet_publisher` (`publisher_user_id`, `status`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='待领养宠物';
+
+DROP TABLE IF EXISTS `pet_adoption_application`;
+CREATE TABLE `pet_adoption_application` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `adoption_pet_id` bigint NOT NULL,
+  `applicant_user_id` bigint NOT NULL,
+  `publisher_user_id` bigint NOT NULL,
+  `real_name` varchar(64) DEFAULT '',
+  `phone` varchar(32) DEFAULT '',
+  `city` varchar(64) DEFAULT '',
+  `housing_type` varchar(64) DEFAULT '',
+  `pet_experience` varchar(500) DEFAULT '',
+  `apply_reason` varchar(1000) DEFAULT '',
+  `commitment` varchar(1000) DEFAULT '',
+  `visit_time` datetime DEFAULT NULL,
+  `visit_address` varchar(255) DEFAULT '',
+  `status` tinyint DEFAULT 0 COMMENT '0已提交 1初审通过 2待补充 3拒绝 4已撤回 5已预约 6已确认领养 7已关闭',
+  `review_reason` varchar(500) DEFAULT '',
+  `create_by` varchar(64) DEFAULT '', `create_time` datetime DEFAULT NULL, `update_by` varchar(64) DEFAULT '', `update_time` datetime DEFAULT NULL, `remark` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_pet_adoption_application_pet` (`adoption_pet_id`, `status`, `create_time`),
+  KEY `idx_pet_adoption_application_applicant` (`applicant_user_id`, `status`, `create_time`),
+  KEY `idx_pet_adoption_application_publisher` (`publisher_user_id`, `status`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='领养申请';
+
+DROP TABLE IF EXISTS `pet_adoption_followup`;
+CREATE TABLE `pet_adoption_followup` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `application_id` bigint NOT NULL,
+  `adoption_pet_id` bigint NOT NULL,
+  `adopter_user_id` bigint NOT NULL,
+  `publisher_user_id` bigint NOT NULL,
+  `followup_round` int DEFAULT 1,
+  `plan_time` datetime DEFAULT NULL,
+  `actual_time` datetime DEFAULT NULL,
+  `health_status` varchar(255) DEFAULT '',
+  `living_status` varchar(500) DEFAULT '',
+  `image_urls` text,
+  `status` tinyint DEFAULT 0 COMMENT '0待回访 1已提交 2正常归档 3异常待处理 4已关闭',
+  `abnormal_reason` varchar(500) DEFAULT '',
+  `handle_result` varchar(500) DEFAULT '',
+  `create_by` varchar(64) DEFAULT '', `create_time` datetime DEFAULT NULL, `update_by` varchar(64) DEFAULT '', `update_time` datetime DEFAULT NULL, `remark` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_pet_adoption_followup_user` (`adopter_user_id`, `status`, `plan_time`),
+  KEY `idx_pet_adoption_followup_publisher` (`publisher_user_id`, `status`, `plan_time`),
+  KEY `idx_pet_adoption_followup_pet` (`adoption_pet_id`, `status`, `plan_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='领养回访';
 
 DROP TABLE IF EXISTS `pet_topic`;
 CREATE TABLE `pet_topic` (

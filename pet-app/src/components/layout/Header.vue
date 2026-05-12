@@ -9,6 +9,7 @@
     </div>
     <nav class="nav">
       <router-link to="/"><i class="el-icon-s-home"></i>首页</router-link>
+      <router-link to="/adoptions"><i class="el-icon-guide"></i>领养</router-link>
       <router-link to="/topics"><i class="el-icon-collection-tag"></i>话题</router-link>
       <router-link to="/publish"><i class="el-icon-edit-outline"></i>发布</router-link>
       <router-link v-if="token" to="/favorites"><i class="el-icon-star-off"></i>收藏</router-link>
@@ -28,6 +29,7 @@
           <span class="user-entry">{{ name || '已登录' }}<i class="el-icon-arrow-down el-icon--right"></i></span>
           <el-dropdown-menu slot="dropdown">
             <el-dropdown-item @click.native="$router.push('/notifications')">通知中心</el-dropdown-item>
+            <el-dropdown-item @click.native="$router.push('/adoption-manage')">我的领养</el-dropdown-item>
             <el-dropdown-item @click.native="$router.push('/favorites')">我的收藏</el-dropdown-item>
             <el-dropdown-item @click.native="$router.push('/pets')">宠物档案</el-dropdown-item>
             <el-dropdown-item @click.native="$router.push('/me')">个人主页</el-dropdown-item>

@@ -27,5 +27,13 @@ export const petApi = {
   auditReview: data => request({ url: '/manager/pet/reviews/audit', method: 'post', data }),
   listHealthRecords: query => request({ url: '/manager/pet/health-records/list', method: 'get', params: query }),
   listReminders: query => request({ url: '/manager/pet/reminders/list', method: 'get', params: query }),
+  listAdoptions: query => request({ url: '/manager/pet/adoptions/list', method: 'get', params: query }),
+  auditAdoption: data => request({ url: '/manager/pet/adoptions/audit', method: 'post', data }),
+  updateAdoptionStatus: data => request({ url: '/manager/pet/adoptions/status', method: 'put', data }),
+  listAdoptionApplications: query => request({ url: '/manager/pet/adoption-applications/list', method: 'get', params: query }),
+  updateAdoptionApplicationStatus: data => request({ url: '/manager/pet/adoption-applications/status', method: 'put', data }),
+  listAdoptionFollowups: query => request({ url: '/manager/pet/adoption-followups/list', method: 'get', params: query }),
+  handleAdoptionFollowup: data => request({ url: '/manager/pet/adoption-followups/handle', method: 'put', data }),
+  adoptionStatistics: () => request({ url: '/manager/pet/statistics/adoption', method: 'get' }),
   overview: () => request({ url: '/manager/pet/statistics/overview', method: 'get' })
 }

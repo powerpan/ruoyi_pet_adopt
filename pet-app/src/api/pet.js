@@ -116,6 +116,58 @@ export function listServices(params) {
   return request({ url: '/app/pet/services', method: 'get', params, headers: { isToken: false } })
 }
 
+export function listAdoptions(params) {
+  return request({ url: '/app/pet/adoptions', method: 'get', params, headers: { isToken: false } })
+}
+
+export function listMyAdoptions(params) {
+  return request({ url: '/app/pet/adoptions/mine', method: 'get', params })
+}
+
+export function getAdoption(id) {
+  return request({ url: '/app/pet/adoptions/' + id, method: 'get', headers: { isToken: false } })
+}
+
+export function createAdoption(data) {
+  return request({ url: '/app/pet/adoptions', method: 'post', data })
+}
+
+export function updateAdoption(data) {
+  return request({ url: '/app/pet/adoptions', method: 'put', data })
+}
+
+export function deleteAdoptions(ids) {
+  return request({ url: '/app/pet/adoptions/' + ids, method: 'delete' })
+}
+
+export function applyAdoption(id, data) {
+  return request({ url: `/app/pet/adoptions/${id}/applications`, method: 'post', data })
+}
+
+export function listMyAdoptionApplications(params) {
+  return request({ url: '/app/pet/adoption-applications/mine', method: 'get', params })
+}
+
+export function listReceivedAdoptionApplications(params) {
+  return request({ url: '/app/pet/adoption-applications/received', method: 'get', params })
+}
+
+export function updateAdoptionApplicationStatus(data) {
+  return request({ url: '/app/pet/adoption-applications/status', method: 'put', data })
+}
+
+export function confirmAdoptionApplication(id) {
+  return request({ url: `/app/pet/adoption-applications/${id}/confirm`, method: 'post' })
+}
+
+export function listAdoptionFollowups(params) {
+  return request({ url: '/app/pet/adoption-followups', method: 'get', params })
+}
+
+export function submitAdoptionFollowup(id, data) {
+  return request({ url: `/app/pet/adoption-followups/${id}/submit`, method: 'post', data })
+}
+
 export function listServiceReviews(serviceId, params) {
   return request({ url: `/app/pet/services/${serviceId}/reviews`, method: 'get', params, headers: { isToken: false } })
 }
