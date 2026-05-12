@@ -93,9 +93,10 @@
             </el-table-column>
             <el-table-column prop="reviewReason" label="处理意见" min-width="180" show-overflow-tooltip />
             <el-table-column prop="visitTime" label="看宠时间" width="160" />
-            <el-table-column label="操作" width="220">
+            <el-table-column label="操作" width="280">
               <template slot-scope="scope">
                 <el-button size="mini" type="text" @click="$router.push('/adoptions/' + scope.row.adoptionPetId)">查看宠物</el-button>
+                <el-button size="mini" type="text" @click="openApplicationChat(scope.row, 'applicant')">沟通</el-button>
                 <el-button size="mini" type="text" :disabled="!canSupplementApplication(scope.row)" @click="openMyApplication(scope.row)">补充资料</el-button>
                 <el-button size="mini" type="text" class="danger-text" :disabled="!canWithdrawApplication(scope.row)" @click="withdrawApplication(scope.row)">撤回</el-button>
               </template>
@@ -118,10 +119,16 @@
               <template slot-scope="scope"><el-tag size="mini" :type="applicationStatusTag(scope.row.status)">{{ applicationStatus(scope.row.status) }}</el-tag></template>
             </el-table-column>
             <el-table-column prop="applyReason" label="申请理由" min-width="180" show-overflow-tooltip />
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="500" fixed="right">
               <template slot-scope="scope">
-                <el-button size="mini" type="text" @click="openApplication(scope.row)">详情/处理</el-button>
-                <el-button size="mini" type="text" :disabled="scope.row.status !== 1 && scope.row.status !== 5" @click="confirmAdoption(scope.row)">确认领养</el-button>
+                <el-button size="mini" type="text" @click="openApplication(scope.row)">查看/沟通</el-button>
+                <el-button size="mini" type="text" :disabled="!canEnterCommunication(scope.row)" @click="submitApplicationAction(scope.row, 1)">进入沟通</el-button>
+                <el-button size="mini" type="text" :disabled="!canRequestSupplement(scope.row)" @click="openApplicationAction(scope.row, 2)">要求补充</el-button>
+                <el-button size="mini" type="text" :disabled="!canScheduleVisit(scope.row)" @click="openApplicationAction(scope.row, 5)">{{ Number(scope.row.status) === 5 ? '调整约看' : '约看宠' }}</el-button>
+                <el-button size="mini" type="text" :disabled="!canCancelSchedule(scope.row)" @click="cancelSchedule(scope.row)">取消约看</el-button>
+                <el-button size="mini" type="text" class="danger-text" :disabled="!canRejectApplication(scope.row)" @click="openApplicationAction(scope.row, 3)">拒绝</el-button>
+                <el-button size="mini" type="text" :disabled="!canCloseApplication(scope.row)" @click="openApplicationAction(scope.row, 7)">关闭</el-button>
+                <el-button size="mini" type="text" :disabled="!canConfirmHandoff(scope.row)" @click="confirmAdoption(scope.row)">确认移交</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -152,34 +159,64 @@
       </el-tab-pane>
     </el-tabs>
 
-    <el-dialog title="处理领养申请" :visible.sync="applicationDialog" width="720px">
-      <el-descriptions :column="2" border size="small">
-        <el-descriptions-item label="宠物">{{ activeApplication.petName }}</el-descriptions-item>
-        <el-descriptions-item label="申请人">{{ activeApplication.applicantName || activeApplication.realName }}</el-descriptions-item>
-        <el-descriptions-item label="电话">{{ activeApplication.phone }}</el-descriptions-item>
-        <el-descriptions-item label="城市">{{ activeApplication.city }}</el-descriptions-item>
-        <el-descriptions-item label="居住情况">{{ activeApplication.housingType }}</el-descriptions-item>
-        <el-descriptions-item label="养宠经验">{{ activeApplication.petExperience }}</el-descriptions-item>
-        <el-descriptions-item label="申请理由">{{ activeApplication.applyReason }}</el-descriptions-item>
-        <el-descriptions-item label="承诺">{{ activeApplication.commitment }}</el-descriptions-item>
-      </el-descriptions>
-      <el-form label-width="92px" class="dialog-form">
-        <el-form-item label="处理状态">
-          <el-select v-model="applicationForm.status" class="full">
-            <el-option label="初审通过" :value="1" />
-            <el-option label="待补充" :value="2" />
-            <el-option label="拒绝" :value="3" />
-            <el-option label="已预约" :value="5" />
-            <el-option label="关闭" :value="7" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="看宠时间"><el-date-picker v-model="applicationForm.visitTime" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="full" /></el-form-item>
-        <el-form-item label="看宠地点"><el-input v-model="applicationForm.visitAddress" maxlength="255" /></el-form-item>
-        <el-form-item label="处理意见"><el-input v-model="applicationForm.reviewReason" type="textarea" :rows="3" maxlength="500" show-word-limit /></el-form-item>
-      </el-form>
-      <div slot="footer">
-        <el-button @click="applicationDialog = false">取消</el-button>
-        <el-button type="primary" :loading="savingApplication" @click="saveApplicationStatus">保存</el-button>
+    <el-dialog :title="applicationDialogTitle" :visible.sync="applicationDialog" width="920px">
+      <div class="application-dialog-layout">
+        <section class="application-info">
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item label="宠物">{{ activeApplication.petName }}</el-descriptions-item>
+            <el-descriptions-item label="申请人">{{ activeApplication.applicantName || activeApplication.realName }}</el-descriptions-item>
+            <el-descriptions-item label="电话">{{ activeApplication.phone }}</el-descriptions-item>
+            <el-descriptions-item label="城市">{{ activeApplication.city }}</el-descriptions-item>
+            <el-descriptions-item label="当前状态">
+              <el-tag size="mini" :type="applicationStatusTag(activeApplication.status)">{{ applicationStatus(activeApplication.status) }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="看宠时间">{{ activeApplication.visitTime || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="看宠地点">{{ activeApplication.visitAddress || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="处理意见">{{ activeApplication.reviewReason || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="居住情况">{{ activeApplication.housingType || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="养宠经验">{{ activeApplication.petExperience || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="申请理由">{{ activeApplication.applyReason || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="承诺">{{ activeApplication.commitment || '-' }}</el-descriptions-item>
+          </el-descriptions>
+
+          <div v-if="activeApplicationRole === 'publisher'" class="application-actions">
+            <el-button size="mini" type="primary" :disabled="!canEnterCommunication(activeApplication)" :loading="savingApplication" @click="submitApplicationAction(activeApplication, 1)">进入沟通</el-button>
+            <el-button size="mini" :disabled="!canRequestSupplement(activeApplication)" @click="openApplicationAction(activeApplication, 2)">要求补充</el-button>
+            <el-button size="mini" :disabled="!canScheduleVisit(activeApplication)" @click="openApplicationAction(activeApplication, 5)">{{ Number(activeApplication.status) === 5 ? '调整约看' : '约看宠' }}</el-button>
+            <el-button size="mini" :disabled="!canCancelSchedule(activeApplication)" @click="cancelSchedule(activeApplication)">取消约看</el-button>
+            <el-button size="mini" type="danger" plain :disabled="!canRejectApplication(activeApplication)" @click="openApplicationAction(activeApplication, 3)">拒绝</el-button>
+            <el-button size="mini" :disabled="!canCloseApplication(activeApplication)" @click="openApplicationAction(activeApplication, 7)">关闭</el-button>
+            <el-button size="mini" type="success" :disabled="!canConfirmHandoff(activeApplication)" @click="confirmAdoption(activeApplication)">确认移交</el-button>
+          </div>
+
+          <el-form v-if="applicationAction" label-width="86px" class="dialog-form action-form">
+            <el-alert :title="applicationActionTitle" type="info" :closable="false" />
+            <el-form-item v-if="Number(applicationForm.status) === 5" label="看宠时间"><el-date-picker v-model="applicationForm.visitTime" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="full" /></el-form-item>
+            <el-form-item v-if="Number(applicationForm.status) === 5" label="看宠地点"><el-input v-model="applicationForm.visitAddress" maxlength="255" /></el-form-item>
+            <el-form-item label="处理意见"><el-input v-model="applicationForm.reviewReason" type="textarea" :rows="3" maxlength="500" show-word-limit /></el-form-item>
+            <el-form-item>
+              <el-button @click="cancelApplicationAction">取消</el-button>
+              <el-button type="primary" :loading="savingApplication" @click="saveApplicationStatus">保存</el-button>
+            </el-form-item>
+          </el-form>
+        </section>
+
+        <section class="application-chat">
+          <div ref="applicationChatBox" class="chat-box" v-loading="loading.messages">
+            <div v-for="item in applicationMessages" :key="item.id" class="chat-message" :class="{ self: isSelfApplicationMessage(item) }">
+              <div class="message-meta">
+                <span>{{ applicationMessageSender(item) }}</span>
+                <time>{{ item.createTime }}</time>
+              </div>
+              <div class="message-bubble">{{ item.content }}</div>
+            </div>
+            <el-empty v-if="!loading.messages && applicationMessages.length === 0" description="还没有领养沟通消息" />
+          </div>
+          <div class="chat-input">
+            <el-input v-model="applicationMessageText" :disabled="isTerminalApplication(activeApplication.status)" type="textarea" :rows="3" maxlength="500" show-word-limit placeholder="输入领养沟通内容" />
+            <el-button type="primary" :disabled="isTerminalApplication(activeApplication.status)" :loading="sendingApplicationMessage" @click="sendApplicationMessage">发送</el-button>
+          </div>
+        </section>
       </div>
     </el-dialog>
 
@@ -219,10 +256,12 @@ import {
   confirmAdoptionApplication,
   createAdoption,
   deleteAdoptions,
+  listAdoptionApplicationMessages,
   listAdoptionFollowups,
   listMyAdoptionApplications,
   listMyAdoptions,
   listReceivedAdoptionApplications,
+  sendAdoptionApplicationMessage,
   submitAdoptionFollowup,
   updateAdoption,
   updateAdoptionApplicationStatus,
@@ -240,24 +279,53 @@ export default {
       mine: [],
       received: [],
       followups: [],
-      loading: { published: false, mine: false, received: false, followups: false },
+      applicationMessages: [],
+      loading: { published: false, mine: false, received: false, followups: false, messages: false },
       savingPet: false,
       savingApplication: false,
       savingMyApplication: false,
       savingFollowup: false,
+      sendingApplicationMessage: false,
       applicationDialog: false,
       myApplicationDialog: false,
       followupDialog: false,
       activeApplication: {},
+      activeApplicationRole: 'publisher',
       activeMyApplication: {},
       activeFollowup: {},
+      applicationAction: '',
+      applicationMessageText: '',
       applicationForm: this.emptyApplicationForm(),
       myApplicationForm: this.emptyMyApplicationForm(),
-      followupForm: this.emptyFollowupForm()
+      followupForm: this.emptyFollowupForm(),
+      applicationStatusOptions: [
+        { label: '已提交', value: 0 },
+        { label: '沟通中', value: 1 },
+        { label: '待补充', value: 2 },
+        { label: '拒绝', value: 3 },
+        { label: '已撤回', value: 4 },
+        { label: '已约看宠', value: 5 },
+        { label: '已确认领养', value: 6 },
+        { label: '已关闭', value: 7 }
+      ]
     }
   },
   created() {
     this.loadAll()
+  },
+  computed: {
+    applicationDialogTitle() {
+      const petName = this.activeApplication.petName || '领养申请'
+      return this.activeApplicationRole === 'publisher' ? `处理申请 - ${petName}` : `申请沟通 - ${petName}`
+    },
+    applicationActionTitle() {
+      return ({
+        supplement: '要求申请人补充资料',
+        reject: '拒绝该领养申请',
+        schedule: '安排线下看宠时间和地点',
+        close: '关闭该领养申请'
+      })[this.applicationAction] || '处理领养申请'
+    }
   },
   methods: {
     emptyPet() {
@@ -268,7 +336,7 @@ export default {
       }
     },
     emptyApplicationForm() {
-      return { id: null, status: 1, visitTime: '', visitAddress: '', reviewReason: '' }
+      return { id: null, status: undefined, visitTime: '', visitAddress: '', reviewReason: '' }
     },
     emptyMyApplicationForm() {
       return {
@@ -284,6 +352,13 @@ export default {
     },
     emptyFollowupForm() {
       return { healthStatus: '', livingStatus: '', imageUrls: '', abnormalReason: '' }
+    },
+    hasValidApplicationId(rowOrId) {
+      const id = rowOrId && typeof rowOrId === 'object' ? rowOrId.id : rowOrId
+      return id !== undefined && id !== null && /^\d+$/.test(String(id).trim())
+    },
+    warnMissingApplicationId() {
+      this.$message.warning('申请记录缺少ID，请刷新后重试')
     },
     loadAll() {
       this.loadPublished()
@@ -357,24 +432,164 @@ export default {
       return [0, 5, 6].indexOf(Number(row.status)) !== -1
     },
     openApplication(row) {
-      this.activeApplication = row
+      this.openApplicationChat(row, 'publisher')
+    },
+    openApplicationChat(row, role) {
+      if (!this.hasValidApplicationId(row)) {
+        this.warnMissingApplicationId()
+        return
+      }
+      this.activeApplication = { ...row }
+      this.activeApplicationRole = role || 'publisher'
+      this.applicationAction = ''
+      this.applicationMessageText = ''
+      this.applicationForm = this.emptyApplicationForm()
+      this.applicationDialog = true
+      this.loadApplicationMessages()
+    },
+    openApplicationAction(row, status) {
+      if (!this.hasValidApplicationId(row)) {
+        this.warnMissingApplicationId()
+        return
+      }
+      this.activeApplication = { ...row }
+      this.activeApplicationRole = 'publisher'
       this.applicationForm = {
         id: row.id,
-        status: row.status === 0 ? 1 : row.status,
+        status,
         visitTime: row.visitTime || '',
         visitAddress: row.visitAddress || '',
         reviewReason: row.reviewReason || ''
       }
+      this.applicationAction = ({ 2: 'supplement', 3: 'reject', 5: 'schedule', 7: 'close' })[Number(status)] || 'process'
       this.applicationDialog = true
+      this.loadApplicationMessages()
+    },
+    cancelApplicationAction() {
+      this.applicationAction = ''
+      this.applicationForm = this.emptyApplicationForm()
     },
     saveApplicationStatus() {
+      if (!this.hasValidApplicationId(this.applicationForm.id)) {
+        this.warnMissingApplicationId()
+        return
+      }
+      if (!this.canProcessApplicationStatus(this.activeApplication.status)) {
+        this.$message.warning('已结束的申请只能查看详情，不能重复处理')
+        return
+      }
+      if (!this.canSubmitApplicationStatus(this.applicationForm.status)) {
+        this.$message.warning('请选择可处理的申请状态后再保存')
+        return
+      }
+      if (Number(this.applicationForm.status) === 5 && (!this.applicationForm.visitTime || !this.applicationForm.visitAddress)) {
+        this.$message.warning('请填写看宠时间和看宠地点')
+        return
+      }
       this.savingApplication = true
       updateAdoptionApplicationStatus(this.applicationForm).then(() => {
         this.$message.success('申请状态已更新')
+        this.applicationAction = ''
         this.applicationDialog = false
-        this.loadReceived()
+        this.refreshApplicationRows()
       }).finally(() => {
         this.savingApplication = false
+      })
+    },
+    submitApplicationAction(row, status) {
+      if (!this.hasValidApplicationId(row)) {
+        this.warnMissingApplicationId()
+        return
+      }
+      if (!this.canProcessApplicationStatus(row.status)) {
+        this.$message.warning('已结束的申请不能重复处理')
+        return
+      }
+      const payload = {
+        id: row.id,
+        status,
+        visitTime: row.visitTime || '',
+        visitAddress: row.visitAddress || '',
+        reviewReason: status === 1 ? '发布方已进入沟通，请在对话中确认看宠安排。' : (row.reviewReason || '')
+      }
+      this.savingApplication = true
+      updateAdoptionApplicationStatus(payload).then(() => {
+        this.$message.success('申请已进入沟通')
+        this.refreshApplicationRows()
+        if (this.applicationDialog && this.activeApplication.id === row.id) {
+          this.activeApplication = { ...this.activeApplication, status }
+        }
+      }).finally(() => {
+        this.savingApplication = false
+      })
+    },
+    cancelSchedule(row) {
+      if (!this.hasValidApplicationId(row)) {
+        this.warnMissingApplicationId()
+        return
+      }
+      if (!this.canCancelSchedule(row)) {
+        this.$message.warning('只有已约看宠的申请可以取消约看')
+        return
+      }
+      this.$confirm('确认取消本次看宠安排，并将申请退回沟通中吗？', '取消约看', { type: 'warning' }).then(() => {
+        this.savingApplication = true
+        return updateAdoptionApplicationStatus({
+          id: row.id,
+          status: 1,
+          visitTime: null,
+          visitAddress: '',
+          reviewReason: '已取消看宠安排，申请返回沟通中。'
+        })
+      }).then(() => {
+        this.$message.success('已取消约看')
+        this.refreshApplicationRows()
+        if (this.applicationDialog && this.activeApplication.id === row.id) {
+          this.activeApplication = { ...this.activeApplication, status: 1, visitTime: '', visitAddress: '', reviewReason: '已取消看宠安排，申请返回沟通中。' }
+        }
+      }).finally(() => {
+        this.savingApplication = false
+      }).catch(() => {
+        this.savingApplication = false
+      })
+    },
+    refreshApplicationRows() {
+      this.loadReceived()
+      this.loadMine()
+      this.loadPublished()
+    },
+    loadApplicationMessages() {
+      if (!this.hasValidApplicationId(this.activeApplication.id)) {
+        this.applicationMessages = []
+        return
+      }
+      this.loading.messages = true
+      listAdoptionApplicationMessages(this.activeApplication.id).then(res => {
+        this.applicationMessages = res.data || []
+        this.scrollApplicationChatToBottom()
+      }).finally(() => {
+        this.loading.messages = false
+      })
+    },
+    sendApplicationMessage() {
+      if (!this.applicationMessageText.trim()) {
+        this.$message.warning('请输入消息内容')
+        return
+      }
+      if (!this.hasValidApplicationId(this.activeApplication.id)) {
+        this.warnMissingApplicationId()
+        return
+      }
+      if (this.isTerminalApplication(this.activeApplication.status)) {
+        this.$message.warning('已结束的申请不能继续沟通')
+        return
+      }
+      this.sendingApplicationMessage = true
+      sendAdoptionApplicationMessage(this.activeApplication.id, { content: this.applicationMessageText.trim() }).then(() => {
+        this.applicationMessageText = ''
+        this.loadApplicationMessages()
+      }).finally(() => {
+        this.sendingApplicationMessage = false
       })
     },
     openMyApplication(row) {
@@ -393,6 +608,10 @@ export default {
       this.myApplicationDialog = true
     },
     saveMyApplication() {
+      if (!this.hasValidApplicationId(this.myApplicationForm.id)) {
+        this.warnMissingApplicationId()
+        return
+      }
       if (!this.myApplicationForm.realName || !this.myApplicationForm.phone) {
         this.$message.warning('请填写真实姓名和联系电话')
         return
@@ -407,6 +626,10 @@ export default {
       })
     },
     withdrawApplication(row) {
+      if (!this.hasValidApplicationId(row)) {
+        this.warnMissingApplicationId()
+        return
+      }
       this.$confirm(`确认撤回「${row.petName || row.id}」的领养申请吗？`, '撤回申请', { type: 'warning' }).then(() => {
         return withdrawAdoptionApplication(row.id)
       }).then(() => {
@@ -415,10 +638,15 @@ export default {
       }).catch(() => {})
     },
     confirmAdoption(row) {
-      this.$confirm(`确认将「${row.petName}」交由 ${row.applicantName || row.realName} 领养吗？`, '确认领养', { type: 'warning' }).then(() => {
+      if (!this.hasValidApplicationId(row)) {
+        this.warnMissingApplicationId()
+        return
+      }
+      this.$confirm(`确认已线下完成交接，并将「${row.petName}」移交给 ${row.applicantName || row.realName} 吗？`, '确认移交', { type: 'warning' }).then(() => {
         return confirmAdoptionApplication(row.id)
       }).then(() => {
-        this.$message.success('领养已确认')
+        this.$message.success('领养移交已确认')
+        this.applicationDialog = false
         this.loadAll()
       }).catch(() => {})
     },
@@ -444,10 +672,41 @@ export default {
       return ({ 1: 'warning', 2: 'success', 3: 'warning', 4: 'info', 5: 'info', 6: 'danger' })[status] || ''
     },
     applicationStatus(status) {
-      return ({ 0: '已提交', 1: '初审通过', 2: '待补充', 3: '拒绝', 4: '已撤回', 5: '已预约', 6: '已确认领养', 7: '已关闭' })[status] || '未知'
+      const found = this.applicationStatusOptions.find(item => Number(item.value) === Number(status))
+      return found ? found.label : '未知'
     },
     applicationStatusTag(status) {
       return ({ 0: 'warning', 1: 'success', 2: 'warning', 3: 'danger', 4: 'info', 5: 'success', 6: 'success', 7: 'info' })[status] || ''
+    },
+    canSubmitApplicationStatus(status) {
+      return [1, 2, 3, 5, 7].includes(Number(status))
+    },
+    canProcessApplicationStatus(status) {
+      return !this.isTerminalApplication(status)
+    },
+    isTerminalApplication(status) {
+      return [3, 4, 6, 7].includes(Number(status))
+    },
+    canEnterCommunication(row) {
+      return row && Number(row.status) === 0
+    },
+    canRequestSupplement(row) {
+      return row && [0, 1].includes(Number(row.status))
+    },
+    canScheduleVisit(row) {
+      return row && [1, 5].includes(Number(row.status))
+    },
+    canCancelSchedule(row) {
+      return row && Number(row.status) === 5
+    },
+    canRejectApplication(row) {
+      return row && [0, 1, 2].includes(Number(row.status))
+    },
+    canCloseApplication(row) {
+      return row && [1, 2, 5].includes(Number(row.status))
+    },
+    canConfirmHandoff(row) {
+      return row && Number(row.status) === 5
     },
     canSupplementApplication(row) {
       return [0, 2].indexOf(Number(row.status)) !== -1
@@ -460,6 +719,27 @@ export default {
     },
     followupStatusTag(status) {
       return ({ 0: 'warning', 1: '', 2: 'success', 3: 'danger', 4: 'info' })[status] || ''
+    },
+    isSelfApplicationMessage(item) {
+      return item && item.senderRole === this.activeApplicationRole
+    },
+    applicationMessageSender(item) {
+      if (!item) return ''
+      if (this.isSelfApplicationMessage(item)) {
+        return item.senderName || '我'
+      }
+      if (item.senderRole === 'publisher') {
+        return item.senderName || this.activeApplication.publisherName || '发布方'
+      }
+      return item.senderName || this.activeApplication.applicantName || this.activeApplication.realName || '申请人'
+    },
+    scrollApplicationChatToBottom() {
+      this.$nextTick(() => {
+        const el = this.$refs.applicationChatBox
+        if (el) {
+          el.scrollTop = el.scrollHeight
+        }
+      })
     }
   }
 }
@@ -517,6 +797,72 @@ export default {
 .dialog-form {
   margin-top: 18px;
 }
+.application-dialog-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 18px;
+}
+.application-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.action-form {
+  padding-top: 4px;
+}
+.action-form .el-alert {
+  margin-bottom: 14px;
+}
+.chat-box {
+  max-height: 420px;
+  min-height: 300px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--pet-border);
+  border-radius: 8px;
+  background: var(--pet-surface-soft);
+}
+.chat-message {
+  max-width: 82%;
+  margin-bottom: 12px;
+}
+.chat-message.self {
+  margin-left: auto;
+}
+.message-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--pet-text-muted);
+  font-size: 12px;
+}
+.chat-message.self .message-meta {
+  justify-content: flex-end;
+}
+.message-bubble {
+  padding: 10px 12px;
+  border: 1px solid var(--pet-border);
+  border-radius: 8px;
+  color: var(--pet-text);
+  background: #fff;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.chat-message.self .message-bubble {
+  border-color: var(--pet-primary);
+  color: #fff;
+  background: var(--pet-primary);
+}
+.chat-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+.chat-input .el-textarea {
+  flex: 1;
+}
 .danger-text {
   color: #f56c6c;
 }
@@ -531,6 +877,13 @@ export default {
   }
   .pet-form .el-form-item {
     grid-column: 1 / -1;
+  }
+  .application-dialog-layout {
+    grid-template-columns: 1fr;
+  }
+  .chat-input {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 </style>

@@ -113,6 +113,9 @@ public class PetManagerController extends BaseController {
     @Log(title = "宠物话题", businessType = BusinessType.INSERT)
     @PostMapping("/topics")
     public AjaxResult addTopic(@RequestBody PetTopic topic) {
+        if (topic == null || !isAllowedStatus(defaultInt(topic.getStatus(), 0), 0, 1)) {
+            return error("话题状态不合法");
+        }
         topic.setPostCount(0);
         topic.setStatus(topic.getStatus() == null ? 0 : topic.getStatus());
         topic.setCreateBy(getUsername());
@@ -124,6 +127,12 @@ public class PetManagerController extends BaseController {
     @Log(title = "宠物话题", businessType = BusinessType.UPDATE)
     @PutMapping("/topics")
     public AjaxResult updateTopic(@RequestBody PetTopic topic) {
+        if (topic == null || topic.getId() == null) {
+            return error("话题不存在");
+        }
+        if (topic.getStatus() != null && !isAllowedStatus(topic.getStatus(), 0, 1)) {
+            return error("话题状态不合法");
+        }
         topic.setUpdateBy(getUsername());
         topic.setUpdateTime(new Date());
         return toAjax(topicMapper.updateById(topic));
@@ -301,6 +310,9 @@ public class PetManagerController extends BaseController {
     @PreAuthorize("@ss.hasPermi('manager:pet:service:add')")
     @PostMapping("/services")
     public AjaxResult addService(@RequestBody PetServiceItem service) {
+        if (service == null || !isAllowedStatus(defaultInt(service.getStatus(), 0), 0, 1)) {
+            return error("服务状态不合法");
+        }
         if (service.getMerchantId() == null || approvedMerchant(service.getMerchantId()) == null) {
             return error("请选择已审核通过且启用的商家");
         }
@@ -315,8 +327,11 @@ public class PetManagerController extends BaseController {
     @PreAuthorize("@ss.hasPermi('manager:pet:service:edit')")
     @PutMapping("/services")
     public AjaxResult updateService(@RequestBody PetServiceItem service) {
-        if (service.getId() == null) {
+        if (service == null || service.getId() == null) {
             return error("服务不存在");
+        }
+        if (service.getStatus() != null && !isAllowedStatus(service.getStatus(), 0, 1)) {
+            return error("服务状态不合法");
         }
         PetServiceItem exists = serviceItemMapper.selectById(service.getId());
         if (exists == null) {
@@ -491,13 +506,26 @@ public class PetManagerController extends BaseController {
         if (exists == null) {
             return error("待领养宠物不存在");
         }
+        if (pet.getStatus() == 5 && (exists.getStatus() == null || (exists.getStatus() != 2 && exists.getStatus() != 3))) {
+            return error("只有已发布或已预约的领养宠物可以下架");
+        }
+        if (pet.getStatus() == 2 && (exists.getStatus() == null || exists.getStatus() != 5)) {
+            return error("只有已下架的领养宠物可以恢复展示");
+        }
+        Integer nextStatus = pet.getStatus();
+        if (nextStatus == 2 && hasScheduledAdoptionApplication(exists.getId())) {
+            nextStatus = 3;
+        }
         int rows = adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
                 .eq("id", pet.getId())
-                .ne("status", 4)
-                .set("status", pet.getStatus())
+                .eq("status", exists.getStatus())
+                .set("status", nextStatus)
                 .set("audit_reason", pet.getAuditReason())
                 .set("update_by", getUsername())
                 .set("update_time", new Date()));
+        if (rows == 0) {
+            return error("领养宠物状态已变化，请刷新后重试");
+        }
         notificationService.create(exists.getPublisherUserId(), SecurityUtils.getUserId(), "adoption_status", "adoption_pet",
                 exists.getId(), pet.getStatus() == 5 ? "待领养宠物已下架" : "待领养宠物已恢复展示",
                 defaultText(pet.getAuditReason(), "宠物「" + exists.getName() + "」展示状态已由平台更新。"), "/adoption-manage");
@@ -532,12 +560,18 @@ public class PetManagerController extends BaseController {
             return error("待领养宠物不存在或已完成领养");
         }
         if (application.getStatus() != null && application.getStatus() == 5) {
+            if (exists.getStatus() == null || (exists.getStatus() != 1 && exists.getStatus() != 5)) {
+                return error("请先进入沟通，再安排看宠");
+            }
+            if (application.getVisitTime() == null || application.getVisitAddress() == null || application.getVisitAddress().trim().length() == 0) {
+                return error("安排看宠必须填写看宠时间和地点");
+            }
             long scheduledCount = adoptionApplicationMapper.selectCount(new QueryWrapper<PetAdoptionApplication>()
                     .eq("adoption_pet_id", pet.getId())
                     .ne("id", exists.getId())
                     .eq("status", 5));
             if (scheduledCount > 0) {
-                return error("该宠物已有预约中的申请，请先处理原预约");
+                return error("该宠物已有约看中的申请，请先处理原约看安排");
             }
             if (pet.getStatus() != null && pet.getStatus() != 2 && pet.getStatus() != 3) {
                 return error("当前宠物状态不能安排看宠预约");
@@ -568,6 +602,13 @@ public class PetManagerController extends BaseController {
                 throw new ServiceException("宠物状态已变化，请刷新后重试");
             }
         } else if (exists.getStatus() != null && exists.getStatus() == 5) {
+            if (application.getStatus() != null && application.getStatus() == 1) {
+                adoptionApplicationMapper.update(null, new UpdateWrapper<PetAdoptionApplication>()
+                        .eq("id", exists.getId())
+                        .eq("status", 1)
+                        .set("visit_time", null)
+                        .set("visit_address", ""));
+            }
             refreshAdoptionReservationState(pet.getId());
         }
         notificationService.create(exists.getApplicantUserId(), SecurityUtils.getUserId(), "adoption_application_status", "adoption_application",
@@ -587,24 +628,34 @@ public class PetManagerController extends BaseController {
     @PreAuthorize("@ss.hasPermi('manager:pet:adoptionFollowup:list')")
     @PutMapping("/adoption-followups/handle")
     public AjaxResult handleAdoptionFollowup(@RequestBody PetAdoptionFollowup followup) {
-        if (followup == null || followup.getId() == null) {
-            return error("回访记录不存在");
+        if (followup == null || followup.getId() == null || !isAllowedAdoptionFollowupHandleStatus(followup.getStatus())) {
+            return error("回访处理状态不合法");
         }
         PetAdoptionFollowup exists = adoptionFollowupMapper.selectById(followup.getId());
         if (exists == null) {
             return error("回访记录不存在");
         }
+        if (exists.getStatus() == null) {
+            return error("回访状态异常，请刷新后重试");
+        }
+        if (exists.getStatus() != null && (exists.getStatus() == 2 || exists.getStatus() == 4)) {
+            return error("已归档或已关闭的回访不能重复处理");
+        }
         int rows = adoptionFollowupMapper.update(null, new UpdateWrapper<PetAdoptionFollowup>()
                 .eq("id", followup.getId())
-                .set("status", followup.getStatus() == null ? 4 : followup.getStatus())
+                .eq("status", exists.getStatus())
+                .set("status", followup.getStatus())
                 .set("handle_result", followup.getHandleResult())
                 .set("update_by", getUsername())
                 .set("update_time", new Date()));
+        if (rows == 0) {
+            return error("回访状态已变化，请刷新后重试");
+        }
         notificationService.create(exists.getAdopterUserId(), SecurityUtils.getUserId(), "adoption_followup_handle", "adoption_followup",
-                exists.getId(), "回访异常已处理", defaultText(followup.getHandleResult(), "平台已处理本次回访异常。"), "/adoption-manage");
+                exists.getId(), adoptionFollowupHandleTitle(followup.getStatus()), defaultText(followup.getHandleResult(), "平台已处理本次回访。"), "/adoption-manage");
         if (!exists.getPublisherUserId().equals(exists.getAdopterUserId())) {
             notificationService.create(exists.getPublisherUserId(), SecurityUtils.getUserId(), "adoption_followup_handle", "adoption_followup",
-                    exists.getId(), "回访异常已处理", defaultText(followup.getHandleResult(), "平台已处理本次回访异常。"), "/adoption-manage");
+                    exists.getId(), adoptionFollowupHandleTitle(followup.getStatus()), defaultText(followup.getHandleResult(), "平台已处理本次回访。"), "/adoption-manage");
         }
         return toAjax(rows);
     }
@@ -651,6 +702,16 @@ public class PetManagerController extends BaseController {
         return status != null && (status == 1 || status == 2 || status == 3 || status == 5 || status == 7);
     }
 
+    private boolean isAllowedAdoptionFollowupHandleStatus(Integer status) {
+        return status != null && (status == 2 || status == 4);
+    }
+
+    private boolean hasScheduledAdoptionApplication(Long adoptionPetId) {
+        return adoptionApplicationMapper.selectCount(new QueryWrapper<PetAdoptionApplication>()
+                .eq("adoption_pet_id", adoptionPetId)
+                .eq("status", 5)) > 0;
+    }
+
     private boolean isTerminalAdoptionApplication(Integer status) {
         return status != null && (status == 3 || status == 4 || status == 6 || status == 7);
     }
@@ -674,7 +735,7 @@ public class PetManagerController extends BaseController {
 
     private String adoptionApplicationStatusTitle(Integer status) {
         if (status != null && status == 1) {
-            return "领养申请初审通过";
+            return "领养申请已进入沟通";
         }
         if (status != null && status == 2) {
             return "领养申请需要补充资料";
@@ -683,12 +744,22 @@ public class PetManagerController extends BaseController {
             return "领养申请未通过";
         }
         if (status != null && status == 5) {
-            return "已安排看宠预约";
+            return "已安排看宠";
         }
         if (status != null && status == 7) {
             return "领养申请已关闭";
         }
         return "领养申请状态已更新";
+    }
+
+    private String adoptionFollowupHandleTitle(Integer status) {
+        if (status != null && status == 2) {
+            return "回访已正常归档";
+        }
+        if (status != null && status == 4) {
+            return "回访已关闭";
+        }
+        return "回访状态已更新";
     }
 
     private String defaultText(String value, String fallback) {
@@ -734,6 +805,10 @@ public class PetManagerController extends BaseController {
     }
 
     private boolean isAllowedAuditStatus(Integer status, Integer... allowedStatuses) {
+        return isAllowedStatus(status, allowedStatuses);
+    }
+
+    private boolean isAllowedStatus(Integer status, Integer... allowedStatuses) {
         if (status == null) {
             return false;
         }
@@ -842,5 +917,9 @@ public class PetManagerController extends BaseController {
             return Integer.valueOf(2).equals(nextStatus) || Integer.valueOf(3).equals(nextStatus);
         }
         return false;
+    }
+
+    private static Integer defaultInt(Integer value, Integer fallback) {
+        return value == null ? fallback : value;
     }
 }

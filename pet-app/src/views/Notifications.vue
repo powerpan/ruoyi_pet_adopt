@@ -157,7 +157,8 @@ export default {
         adoption_status: '领养状态',
         adoption_application: '领养申请',
         adoption_application_status: '申请进度',
-        adoption_confirmed: '领养确认',
+        adoption_message: '领养沟通',
+        adoption_confirmed: '移交确认',
         adoption_followup_abnormal: '回访异常',
         adoption_followup_handle: '回访处理'
       })[type] || '系统通知'
@@ -183,6 +184,7 @@ export default {
         adoption_status: 'el-icon-refresh',
         adoption_application: 'el-icon-document-add',
         adoption_application_status: 'el-icon-document-checked',
+        adoption_message: 'el-icon-chat-dot-round',
         adoption_confirmed: 'el-icon-success',
         adoption_followup_abnormal: 'el-icon-warning-outline',
         adoption_followup_handle: 'el-icon-finished'

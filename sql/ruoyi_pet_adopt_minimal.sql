@@ -585,7 +585,7 @@ CREATE TABLE `pet_adoption_application` (
   `commitment` varchar(1000) DEFAULT '',
   `visit_time` datetime DEFAULT NULL,
   `visit_address` varchar(255) DEFAULT '',
-  `status` tinyint DEFAULT 0 COMMENT '0已提交 1初审通过 2待补充 3拒绝 4已撤回 5已预约 6已确认领养 7已关闭',
+  `status` tinyint DEFAULT 0 COMMENT '0已提交 1沟通中 2待补充 3拒绝 4已撤回 5已约看宠 6已确认领养 7已关闭',
   `review_reason` varchar(500) DEFAULT '',
   `create_by` varchar(64) DEFAULT '', `create_time` datetime DEFAULT NULL, `update_by` varchar(64) DEFAULT '', `update_time` datetime DEFAULT NULL, `remark` varchar(500) DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -593,6 +593,21 @@ CREATE TABLE `pet_adoption_application` (
   KEY `idx_pet_adoption_application_applicant` (`applicant_user_id`, `status`, `create_time`),
   KEY `idx_pet_adoption_application_publisher` (`publisher_user_id`, `status`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='领养申请';
+
+DROP TABLE IF EXISTS `pet_adoption_message`;
+CREATE TABLE `pet_adoption_message` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `application_id` bigint NOT NULL,
+  `adoption_pet_id` bigint NOT NULL,
+  `sender_user_id` bigint NOT NULL,
+  `sender_role` varchar(32) NOT NULL COMMENT 'applicant/publisher',
+  `message_type` varchar(32) DEFAULT 'text',
+  `content` varchar(1000) NOT NULL,
+  `create_by` varchar(64) DEFAULT '', `create_time` datetime DEFAULT NULL, `update_by` varchar(64) DEFAULT '', `update_time` datetime DEFAULT NULL, `remark` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_pet_adoption_message_application` (`application_id`, `create_time`),
+  KEY `idx_pet_adoption_message_pet` (`adoption_pet_id`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='领养申请对话';
 
 DROP TABLE IF EXISTS `pet_adoption_followup`;
 CREATE TABLE `pet_adoption_followup` (

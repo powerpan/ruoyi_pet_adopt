@@ -49,6 +49,9 @@
       <el-descriptions :column="2" border size="small">
         <el-descriptions-item label="宠物">{{ active.petName }}</el-descriptions-item>
         <el-descriptions-item label="轮次">{{ active.followupRound }}</el-descriptions-item>
+        <el-descriptions-item label="当前状态">
+          <el-tag size="mini" :type="statusType(active.status)">{{ statusText(active.status) }}</el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="计划时间">{{ active.planTime }}</el-descriptions-item>
         <el-descriptions-item label="提交时间">{{ active.actualTime }}</el-descriptions-item>
         <el-descriptions-item label="健康情况">{{ active.healthStatus }}</el-descriptions-item>
@@ -57,14 +60,18 @@
         <el-descriptions-item label="处理结果">{{ active.handleResult }}</el-descriptions-item>
       </el-descriptions>
       <el-form label-width="86px" class="dialog-form">
-        <el-form-item label="处理状态">
-          <el-select v-model="form.status" class="full">
-            <el-option label="正常归档" :value="2" />
-            <el-option label="异常待处理" :value="3" />
-            <el-option label="已关闭" :value="4" />
+        <el-form-item label="处理结果">
+          <el-select v-model="form.status" class="full" placeholder="请选择处理结果">
+            <el-option
+              v-for="item in statusOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+              :disabled="!canHandleStatus(item.value)"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="处理结果"><el-input v-model="form.handleResult" type="textarea" :rows="4" maxlength="500" show-word-limit /></el-form-item>
+        <el-form-item label="处理说明"><el-input v-model="form.handleResult" type="textarea" :rows="4" maxlength="500" show-word-limit /></el-form-item>
       </el-form>
       <div slot="footer">
         <el-button @click="dialog = false">关闭</el-button>
@@ -88,7 +95,7 @@ export default {
       dialog: false,
       active: {},
       query: { pageNum: 1, pageSize: 10, keyword: '', status: undefined },
-      form: { id: null, status: 4, handleResult: '' },
+      form: { id: null, status: undefined, handleResult: '' },
       statusOptions: [
         { label: '待回访', value: 0 },
         { label: '已提交', value: 1 },
@@ -117,10 +124,18 @@ export default {
     },
     open(row) {
       this.active = row
-      this.form = { id: row.id, status: row.status === 3 ? 4 : row.status, handleResult: row.handleResult || '' }
+      this.form = { id: row.id, status: undefined, handleResult: row.handleResult || '' }
       this.dialog = true
     },
     save() {
+      if (!this.canProcessStatus(this.active.status)) {
+        this.$modal.msgWarning('已归档或已关闭的回访只能查看详情，不能重复处理')
+        return
+      }
+      if (!this.canHandleStatus(this.form.status)) {
+        this.$modal.msgWarning('请选择可处理的回访状态后再保存')
+        return
+      }
       this.saving = true
       petApi.handleAdoptionFollowup(this.form).then(() => {
         this.$modal.msgSuccess('操作成功')
@@ -131,11 +146,17 @@ export default {
       })
     },
     statusText(value) {
-      const found = this.statusOptions.find(item => item.value === value)
+      const found = this.statusOptions.find(item => Number(item.value) === Number(value))
       return found ? found.label : value
     },
     statusType(value) {
       return ({ 0: 'warning', 1: '', 2: 'success', 3: 'danger', 4: 'info' })[value] || ''
+    },
+    canHandleStatus(value) {
+      return [2, 4].includes(Number(value))
+    },
+    canProcessStatus(value) {
+      return ![2, 4].includes(Number(value))
     }
   }
 }

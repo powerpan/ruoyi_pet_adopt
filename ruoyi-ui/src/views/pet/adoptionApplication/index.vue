@@ -50,19 +50,24 @@
         <el-descriptions-item label="申请人">{{ active.applicantName || active.realName }}</el-descriptions-item>
         <el-descriptions-item label="电话">{{ active.phone }}</el-descriptions-item>
         <el-descriptions-item label="城市">{{ active.city }}</el-descriptions-item>
+        <el-descriptions-item label="当前状态">
+          <el-tag size="mini" :type="statusType(active.status)">{{ statusText(active.status) }}</el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="居住情况">{{ active.housingType }}</el-descriptions-item>
         <el-descriptions-item label="养宠经验">{{ active.petExperience }}</el-descriptions-item>
         <el-descriptions-item label="申请理由">{{ active.applyReason }}</el-descriptions-item>
         <el-descriptions-item label="领养承诺">{{ active.commitment }}</el-descriptions-item>
       </el-descriptions>
       <el-form label-width="86px" class="dialog-form">
-        <el-form-item label="状态">
-          <el-select v-model="form.status" class="full">
-            <el-option label="初审通过" :value="1" />
-            <el-option label="待补充" :value="2" />
-            <el-option label="拒绝" :value="3" />
-            <el-option label="已预约" :value="5" />
-            <el-option label="关闭" :value="7" />
+        <el-form-item label="处理结果">
+          <el-select v-model="form.status" class="full" placeholder="请选择处理结果">
+            <el-option
+              v-for="item in statusOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+              :disabled="!canSubmitStatus(item.value)"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="看宠时间"><el-date-picker v-model="form.visitTime" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="full" /></el-form-item>
@@ -94,11 +99,11 @@ export default {
       form: this.emptyForm(),
       statusOptions: [
         { label: '已提交', value: 0 },
-        { label: '初审通过', value: 1 },
+        { label: '沟通中', value: 1 },
         { label: '待补充', value: 2 },
         { label: '拒绝', value: 3 },
         { label: '已撤回', value: 4 },
-        { label: '已预约', value: 5 },
+        { label: '已约看宠', value: 5 },
         { label: '已确认领养', value: 6 },
         { label: '已关闭', value: 7 }
       ]
@@ -109,7 +114,7 @@ export default {
   },
   methods: {
     emptyForm() {
-      return { id: null, status: 1, visitTime: '', visitAddress: '', reviewReason: '' }
+      return { id: null, status: undefined, visitTime: '', visitAddress: '', reviewReason: '' }
     },
     load() {
       this.loading = true
@@ -128,7 +133,7 @@ export default {
       this.active = row
       this.form = {
         id: row.id,
-        status: row.status === 0 ? 1 : row.status,
+        status: this.canProcessStatus(row.status) && this.canSubmitStatus(row.status) ? row.status : undefined,
         visitTime: row.visitTime || '',
         visitAddress: row.visitAddress || '',
         reviewReason: row.reviewReason || ''
@@ -136,6 +141,18 @@ export default {
       this.dialog = true
     },
     save() {
+      if (!this.canProcessStatus(this.active.status)) {
+        this.$modal.msgWarning('已结束的申请只能查看详情，不能重复处理')
+        return
+      }
+      if (!this.canSubmitStatus(this.form.status)) {
+        this.$modal.msgWarning('请选择可处理的申请状态后再保存')
+        return
+      }
+      if (Number(this.form.status) === 5 && (!this.form.visitTime || !this.form.visitAddress)) {
+        this.$modal.msgWarning('请填写看宠时间和看宠地点')
+        return
+      }
       this.saving = true
       petApi.updateAdoptionApplicationStatus(this.form).then(() => {
         this.$modal.msgSuccess('操作成功')
@@ -146,11 +163,24 @@ export default {
       })
     },
     statusText(value) {
-      const found = this.statusOptions.find(item => item.value === value)
+      const found = this.statusOptions.find(item => Number(item.value) === Number(value))
       return found ? found.label : value
     },
     statusType(value) {
       return ({ 0: 'warning', 1: 'success', 2: 'warning', 3: 'danger', 4: 'info', 5: 'success', 6: 'success', 7: 'info' })[value] || ''
+    },
+    canSubmitStatus(value) {
+      const next = Number(value)
+      const current = Number(this.active.status)
+      if (next === 1) return [0, 5].includes(current)
+      if (next === 2) return [0, 1].includes(current)
+      if (next === 3) return [0, 1, 2].includes(current)
+      if (next === 5) return [1, 5].includes(current)
+      if (next === 7) return [1, 2, 5].includes(current)
+      return false
+    },
+    canProcessStatus(value) {
+      return ![3, 4, 6, 7].includes(Number(value))
     }
   }
 }

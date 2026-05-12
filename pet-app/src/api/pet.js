@@ -156,6 +156,14 @@ export function updateAdoptionApplicationStatus(data) {
   return request({ url: '/app/pet/adoption-applications/status', method: 'put', data })
 }
 
+export function listAdoptionApplicationMessages(applicationId) {
+  return request({ url: `/app/pet/adoption-applications/${applicationId}/messages`, method: 'get' })
+}
+
+export function sendAdoptionApplicationMessage(applicationId, data) {
+  return request({ url: `/app/pet/adoption-applications/${applicationId}/messages`, method: 'post', data })
+}
+
 export function updateMyAdoptionApplication(data) {
   return request({ url: '/app/pet/adoption-applications', method: 'put', data })
 }
