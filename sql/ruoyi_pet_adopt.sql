@@ -776,7 +776,7 @@ ALTER TABLE `sys_user`
   ADD PRIMARY KEY (`user_id`);
 
 ALTER TABLE `sys_user`
-  MODIFY `user_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '用户ID', AUTO_INCREMENT=6;
+  MODIFY `user_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '用户ID', AUTO_INCREMENT=2;
 
 ALTER TABLE `sys_menu`
   ADD PRIMARY KEY (`menu_id`);
@@ -844,38 +844,9 @@ ALTER TABLE `sys_config`
 ALTER TABLE `sys_config`
   MODIFY `config_id` int(5) NOT NULL AUTO_INCREMENT COMMENT '参数主键', AUTO_INCREMENT=102;
 
--- 宠物领养平台基础内容
-SET @pet_content_password := '$2a$10$Devb1IJNsf0hw1EhWo7/9.ulSduf6PXdMtM6YOR3u6WK0hS4os30W';
-
-INSERT INTO `sys_user` (`user_id`, `dept_id`, `user_name`, `nick_name`, `user_type`, `email`, `phonenumber`, `sex`, `avatar`, `password`, `status`, `del_flag`, `login_ip`, `login_date`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(10, 101, 'rescue01', '暖窝救助站', '00', 'rescue01@example.com', '13800010001', '2', '/profile/pet/adoptions/xiaotang-orange-tabby.png', @pet_content_password, '0', '0', '', NULL, 'content', NOW(), 'content', NOW(), '密码 admin123'),
-(11, 101, 'foster_chen', '陈可可', '00', 'chen@example.com', '13800010002', '1', '/profile/pet/adoptions/doubao-mix-dog.png', @pet_content_password, '0', '0', '', NULL, 'content', NOW(), 'content', NOW(), '密码 admin123'),
-(12, 101, 'adopter_lin', '林安', '00', 'lin@example.com', '13800010003', '0', '/profile/pet/adoptions/dahuang-golden-retriever.png', @pet_content_password, '0', '0', '', NULL, 'content', NOW(), 'content', NOW(), '密码 admin123'),
-(13, 101, 'adopter_wu', '吴小满', '00', 'wu@example.com', '13800010004', '1', '/profile/pet/adoptions/sese-calico-cat.png', @pet_content_password, '0', '0', '', NULL, 'content', NOW(), 'content', NOW(), '密码 admin123'),
-(14, 101, 'merchant_paw', '安心宠物诊所', '00', 'clinic@example.com', '13800010005', '2', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', @pet_content_password, '0', '0', '', NULL, 'content', NOW(), 'content', NOW(), '密码 admin123')
-ON DUPLICATE KEY UPDATE
-  `nick_name` = VALUES(`nick_name`),
-  `email` = VALUES(`email`),
-  `phonenumber` = VALUES(`phonenumber`),
-  `sex` = VALUES(`sex`),
-  `avatar` = VALUES(`avatar`),
-  `password` = VALUES(`password`),
-  `status` = VALUES(`status`),
-  `del_flag` = VALUES(`del_flag`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
-
-INSERT INTO `sys_user_role` (`user_id`, `role_id`) VALUES
-(10, 3), (10, 4), (11, 3), (12, 3), (13, 3), (14, 3)
-ON DUPLICATE KEY UPDATE `role_id` = VALUES(`role_id`);
-
+-- 宠物领养平台基础内容，预置业务数据统一归属 admin 账号
 INSERT INTO `pet_user_profile` (`id`, `user_id`, `nickname`, `avatar`, `bio`, `homepage_cover`, `blogger_status`, `follower_count`, `following_count`, `post_count`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(10010, 10, '暖窝救助站', '/profile/pet/adoptions/xiaotang-orange-tabby.png', '关注城市流浪猫狗救助，提供临时安置、领养审核和回访支持。', '/profile/pet/adoptions/dahuang-golden-retriever.png', 1, 326, 18, 2, 'content', NOW(), 'content', NOW(), '运营内容'),
-(10011, 11, '陈可可', '/profile/pet/adoptions/doubao-mix-dog.png', '个人寄养志愿者，可提供短期照护和基础行为观察。', '/profile/pet/adoptions/doubao-mix-dog.png', 0, 84, 22, 1, 'content', NOW(), 'content', NOW(), '运营内容'),
-(10012, 12, '林安', '/profile/pet/adoptions/dahuang-golden-retriever.png', '已完成一次平台领养，接受回访，持续维护宠物健康档案。', '/profile/pet/adoptions/dahuang-golden-retriever.png', 0, 42, 12, 1, 'content', NOW(), 'content', NOW(), '运营内容'),
-(10013, 13, '吴小满', '/profile/pet/adoptions/sese-calico-cat.png', '有三年养猫经验，正在寻找适合家庭环境的领养伙伴。', '/profile/pet/adoptions/sese-calico-cat.png', 0, 39, 31, 0, 'content', NOW(), 'content', NOW(), '运营内容'),
-(10014, 14, '安心宠物诊所', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', '提供领养后体检、疫苗、绝育和营养建议。', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', 0, 156, 9, 0, 'content', NOW(), 'content', NOW(), '运营内容')
+(1, 1, '管理员', '/profile/pet/adoptions/xiaotang-orange-tabby.png', '平台默认测试账号，预置领养宠物、内容和服务均归属该账号。', '/profile/pet/adoptions/dahuang-golden-retriever.png', 1, 0, 0, 3, 'admin', NOW(), 'admin', NOW(), '默认账号资料')
 ON DUPLICATE KEY UPDATE
   `nickname` = VALUES(`nickname`),
   `avatar` = VALUES(`avatar`),
@@ -890,12 +861,12 @@ ON DUPLICATE KEY UPDATE
   `remark` = VALUES(`remark`);
 
 INSERT INTO `pet_adoption_pet` (`id`, `publisher_user_id`, `publisher_type`, `merchant_id`, `name`, `species`, `breed`, `gender`, `age_months`, `city`, `district`, `cover_url`, `image_urls`, `health_status`, `vaccine_status`, `neutered`, `personality`, `source_desc`, `adoption_requirements`, `status`, `audit_reason`, `adopted_user_id`, `adopted_time`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(10001, 10, 'platform', NULL, '小糖', '猫', '中华田园橘猫', '公', 8, '广州', '天河区', '/profile/pet/adoptions/xiaotang-orange-tabby.png', '/profile/pet/adoptions/xiaotang-orange-tabby.png', '体检正常，已完成体内外驱虫。', '已完成猫三联第一针，第二针待预约。', 1, '亲人、安静，适合有固定作息的家庭。', '小区救助幼猫，经志愿者家庭临时照护后状态稳定。', '需封窗，不散养；接受领养后 7 天、30 天、90 天回访；同意按时补齐疫苗。', 2, '资料完整，照片清晰，准予进入领养大厅。', NULL, NULL, 'content', DATE_SUB(NOW(), INTERVAL 6 DAY), 'content', NOW(), '运营内容'),
-(10002, 11, 'personal', NULL, '豆包', '狗', '小型混血犬', '母', 14, '深圳', '南山区', '/profile/pet/adoptions/doubao-mix-dog.png', '/profile/pet/adoptions/doubao-mix-dog.png', '精神状态好，食欲稳定，无明显皮肤问题。', '已完成狂犬疫苗和年度联苗。', 1, '活泼亲人，会定点如厕，外出牵引表现稳定。', '原主人工作调动无法继续照护，委托平台寻找长期家庭。', '需每日遛狗，不长期笼养；家中成员需全部同意领养。', 2, '通过审核，可公开申请。', NULL, NULL, 'content', DATE_SUB(NOW(), INTERVAL 5 DAY), 'content', NOW(), '运营内容'),
-(10003, 10, 'platform', NULL, '奶油', '猫', '黑白奶牛猫', '母', 24, '广州', '番禺区', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', '体检正常，牙龈和皮毛状态良好。', '年度疫苗已完成。', 1, '慢热但稳定，熟悉后会主动靠近。', '救助站接收的成年猫，已完成隔离观察。', '优先有成年猫照护经验的家庭；可接受一周试养观察。', 3, '已进入看宠预约阶段。', NULL, NULL, 'content', DATE_SUB(NOW(), INTERVAL 11 DAY), 'content', NOW(), '运营内容'),
-(10004, 10, 'platform', NULL, '大黄', '狗', '金毛寻回犬', '公', 36, '佛山', '顺德区', '/profile/pet/adoptions/dahuang-golden-retriever.png', '/profile/pet/adoptions/dahuang-golden-retriever.png', '体检正常，髋关节筛查无异常。', '年度疫苗已完成，已驱虫。', 1, '温和、服从性好，适合有大犬活动空间的家庭。', '救助站转入的大型犬，已完成基础训练。', '需有稳定居住环境和足够运动时间；接受持续回访。', 4, '领养已完成，进入回访阶段。', 12, DATE_SUB(NOW(), INTERVAL 45 DAY), 'content', DATE_SUB(NOW(), INTERVAL 80 DAY), 'content', NOW(), '运营内容'),
-(10005, 11, 'personal', NULL, '花花', '兔', '垂耳兔', '未知', 10, '广州', '海珠区', '/profile/pet/adoptions/huahua-gray-rabbit.png', '/profile/pet/adoptions/huahua-gray-rabbit.png', '食欲正常，便便形态稳定。', '兔类暂不适用常规猫狗疫苗记录。', 0, '安静、胆小，需要耐心互动。', '临时寄养家庭转交，寻找了解兔类照护的新家庭。', '需提供足够活动空间、牧草和饮水；不与猫狗混养。', 1, '', NULL, NULL, 'content', DATE_SUB(NOW(), INTERVAL 1 DAY), 'content', NOW(), '运营内容'),
-(10006, 10, 'platform', NULL, '瑟瑟', '猫', '三花猫', '母', 6, '广州', '越秀区', '/profile/pet/adoptions/sese-calico-cat.png', '/profile/pet/adoptions/sese-calico-cat.png', '基础检查正常，仍需补充疫苗记录照片。', '疫苗信息待补充。', 0, '好奇、爱玩，适应能力较强。', '志愿者救助幼猫，仍在隔离观察期。', '需补齐免疫记录后再开放申请。', 6, '疫苗记录暂不完整，请补充材料后重新提交。', NULL, NULL, 'content', DATE_SUB(NOW(), INTERVAL 3 DAY), 'content', NOW(), '运营内容')
+(10001, 1, 'platform', NULL, '小糖', '猫', '中华田园橘猫', '公', 8, '广州', '天河区', '/profile/pet/adoptions/xiaotang-orange-tabby.png', '/profile/pet/adoptions/xiaotang-orange-tabby.png', '体检正常，已完成体内外驱虫。', '已完成猫三联第一针，第二针待预约。', 1, '亲人、安静，适合有固定作息的家庭。', '小区救助幼猫，经临时照护后状态稳定。', '需封窗，不散养；接受领养后 7 天、30 天、90 天回访；同意按时补齐疫苗。', 2, '新发布，已进入领养大厅。', NULL, NULL, 'admin', DATE_SUB(NOW(), INTERVAL 6 DAY), 'admin', NOW(), '默认发布内容'),
+(10002, 1, 'platform', NULL, '豆包', '狗', '小型混血犬', '母', 14, '深圳', '南山区', '/profile/pet/adoptions/doubao-mix-dog.png', '/profile/pet/adoptions/doubao-mix-dog.png', '精神状态好，食欲稳定，无明显皮肤问题。', '已完成狂犬疫苗和年度联苗。', 1, '活泼亲人，会定点如厕，外出牵引表现稳定。', '原主人工作调动无法继续照护，委托平台寻找长期家庭。', '需每日遛狗，不长期笼养；家中成员需全部同意领养。', 2, '新发布，已进入领养大厅。', NULL, NULL, 'admin', DATE_SUB(NOW(), INTERVAL 5 DAY), 'admin', NOW(), '默认发布内容'),
+(10003, 1, 'platform', NULL, '奶油', '猫', '黑白奶牛猫', '母', 24, '广州', '番禺区', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', '体检正常，牙龈和皮毛状态良好。', '年度疫苗已完成。', 1, '慢热但稳定，熟悉后会主动靠近。', '救助接收的成年猫，已完成隔离观察。', '优先有成年猫照护经验的家庭；可接受一周试养观察。', 2, '新发布，已进入领养大厅。', NULL, NULL, 'admin', DATE_SUB(NOW(), INTERVAL 4 DAY), 'admin', NOW(), '默认发布内容'),
+(10004, 1, 'platform', NULL, '大黄', '狗', '金毛寻回犬', '公', 36, '佛山', '顺德区', '/profile/pet/adoptions/dahuang-golden-retriever.png', '/profile/pet/adoptions/dahuang-golden-retriever.png', '体检正常，髋关节筛查无异常。', '年度疫苗已完成，已驱虫。', 1, '温和、服从性好，适合有大犬活动空间的家庭。', '大型犬救助转入，已完成基础训练。', '需有稳定居住环境和足够运动时间；接受持续回访。', 2, '新发布，已进入领养大厅。', NULL, NULL, 'admin', DATE_SUB(NOW(), INTERVAL 3 DAY), 'admin', NOW(), '默认发布内容'),
+(10005, 1, 'platform', NULL, '花花', '兔', '垂耳兔', '未知', 10, '广州', '海珠区', '/profile/pet/adoptions/huahua-gray-rabbit.png', '/profile/pet/adoptions/huahua-gray-rabbit.png', '食欲正常，便便形态稳定。', '兔类暂不适用常规猫狗疫苗记录。', 0, '安静、胆小，需要耐心互动。', '临时照护家庭转交，寻找了解兔类照护的新家庭。', '需提供足够活动空间、牧草和饮水；不与猫狗混养。', 2, '新发布，已进入领养大厅。', NULL, NULL, 'admin', DATE_SUB(NOW(), INTERVAL 2 DAY), 'admin', NOW(), '默认发布内容'),
+(10006, 1, 'platform', NULL, '瑟瑟', '猫', '三花猫', '母', 6, '广州', '越秀区', '/profile/pet/adoptions/sese-calico-cat.png', '/profile/pet/adoptions/sese-calico-cat.png', '基础检查正常，仍需补充疫苗记录照片。', '疫苗信息待补充。', 0, '好奇、爱玩，适应能力较强。', '志愿者救助幼猫，仍在隔离观察期。', '需补齐免疫记录后按计划免疫。', 2, '新发布，已进入领养大厅。', NULL, NULL, 'admin', DATE_SUB(NOW(), INTERVAL 1 DAY), 'admin', NOW(), '默认发布内容')
 ON DUPLICATE KEY UPDATE
   `publisher_user_id` = VALUES(`publisher_user_id`),
   `publisher_type` = VALUES(`publisher_type`),
@@ -923,103 +894,8 @@ ON DUPLICATE KEY UPDATE
   `update_time` = VALUES(`update_time`),
   `remark` = VALUES(`remark`);
 
-INSERT INTO `pet_adoption_application` (`id`, `adoption_pet_id`, `applicant_user_id`, `publisher_user_id`, `real_name`, `phone`, `city`, `housing_type`, `pet_experience`, `apply_reason`, `commitment`, `visit_time`, `visit_address`, `status`, `review_reason`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(20001, 10001, 12, 10, '林安', '13800010003', '广州', '自有住房，两室一厅，已封窗。', '曾照护一只成年猫，有固定合作宠物医院。', '希望领养性格稳定的猫作为家庭成员，会给小糖独立适应空间。', '不弃养、不散养，按时疫苗驱虫，配合平台回访。', NULL, '', 0, '申请已提交，发布方待处理。', 'content', DATE_SUB(NOW(), INTERVAL 2 DAY), 'content', NOW(), '运营内容'),
-(20002, 10001, 13, 10, '吴小满', '13800010004', '广州', '整租公寓，已安装纱窗。', '三年养猫经验，熟悉幼猫换粮和疫苗周期。', '工作稳定，想给小糖一个长期家庭。', '接受回访和必要的领养前沟通。', DATE_ADD(NOW(), INTERVAL 2 DAY), '广州天河区暖窝救助站', 1, '资料较完整，建议预约线下看猫。', 'content', DATE_SUB(NOW(), INTERVAL 1 DAY), 'content', NOW(), '运营内容'),
-(20003, 10003, 12, 10, '林安', '13800010003', '广州', '自有住房，独立猫房。', '领养过成年犬，愿意学习成年猫适应流程。', '奶油性格稳定，适合现有家庭节奏。', '愿意试养期每日反馈。', DATE_ADD(NOW(), INTERVAL 1 DAY), '广州番禺区暖窝救助站', 5, '已约定线下看宠时间，请按时到场。', 'content', DATE_SUB(NOW(), INTERVAL 4 DAY), 'content', NOW(), '运营内容'),
-(20004, 10004, 12, 10, '林安', '13800010003', '佛山', '自有住房，楼下有固定遛狗区域。', '照护过中大型犬，了解牵引和运动需求。', '大黄性格稳定，和家庭运动习惯匹配。', '接受长期回访，按时维护健康档案。', DATE_SUB(NOW(), INTERVAL 48 DAY), '佛山顺德区暖窝合作点', 6, '线下沟通通过，已确认领养。', 'content', DATE_SUB(NOW(), INTERVAL 55 DAY), 'content', NOW(), '运营内容'),
-(20005, 10004, 13, 10, '吴小满', '13800010004', '广州', '租房，活动空间有限。', '主要照护猫，无大型犬经验。', '喜欢大黄，但担心运动时间不足。', '若不匹配愿意取消申请。', NULL, '', 7, '宠物已由其他申请人完成领养，申请自动关闭。', 'content', DATE_SUB(NOW(), INTERVAL 54 DAY), 'content', NOW(), '运营内容')
-ON DUPLICATE KEY UPDATE
-  `adoption_pet_id` = VALUES(`adoption_pet_id`),
-  `applicant_user_id` = VALUES(`applicant_user_id`),
-  `publisher_user_id` = VALUES(`publisher_user_id`),
-  `real_name` = VALUES(`real_name`),
-  `phone` = VALUES(`phone`),
-  `city` = VALUES(`city`),
-  `housing_type` = VALUES(`housing_type`),
-  `pet_experience` = VALUES(`pet_experience`),
-  `apply_reason` = VALUES(`apply_reason`),
-  `commitment` = VALUES(`commitment`),
-  `visit_time` = VALUES(`visit_time`),
-  `visit_address` = VALUES(`visit_address`),
-  `status` = VALUES(`status`),
-  `review_reason` = VALUES(`review_reason`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
-
-INSERT INTO `pet_adoption_followup` (`id`, `application_id`, `adoption_pet_id`, `adopter_user_id`, `publisher_user_id`, `followup_round`, `plan_time`, `actual_time`, `health_status`, `living_status`, `image_urls`, `status`, `abnormal_reason`, `handle_result`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(30001, 20004, 10004, 12, 10, 1, DATE_SUB(NOW(), INTERVAL 38 DAY), DATE_SUB(NOW(), INTERVAL 37 DAY), '食欲、精神状态正常。', '已适应新家庭，外出牵引稳定，夜间不吠叫。', '/profile/pet/adoptions/dahuang-golden-retriever.png', 2, '', '首访正常归档。', 'content', DATE_SUB(NOW(), INTERVAL 45 DAY), 'content', NOW(), '运营内容'),
-(30002, 20004, 10004, 12, 10, 2, DATE_SUB(NOW(), INTERVAL 15 DAY), DATE_SUB(NOW(), INTERVAL 14 DAY), '整体正常，右耳略有分泌物。', '饮食和排便正常，运动量稳定。', '/profile/pet/adoptions/dahuang-golden-retriever.png', 3, '右耳轻微发红，领养人已预约体检。', '', 'content', DATE_SUB(NOW(), INTERVAL 45 DAY), 'content', NOW(), '运营内容'),
-(30003, 20004, 10004, 12, 10, 3, DATE_ADD(NOW(), INTERVAL 45 DAY), NULL, '', '', '', 0, '', '', 'content', DATE_SUB(NOW(), INTERVAL 45 DAY), 'content', NOW(), '运营内容')
-ON DUPLICATE KEY UPDATE
-  `application_id` = VALUES(`application_id`),
-  `adoption_pet_id` = VALUES(`adoption_pet_id`),
-  `adopter_user_id` = VALUES(`adopter_user_id`),
-  `publisher_user_id` = VALUES(`publisher_user_id`),
-  `followup_round` = VALUES(`followup_round`),
-  `plan_time` = VALUES(`plan_time`),
-  `actual_time` = VALUES(`actual_time`),
-  `health_status` = VALUES(`health_status`),
-  `living_status` = VALUES(`living_status`),
-  `image_urls` = VALUES(`image_urls`),
-  `status` = VALUES(`status`),
-  `abnormal_reason` = VALUES(`abnormal_reason`),
-  `handle_result` = VALUES(`handle_result`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
-
-INSERT INTO `pet_profile` (`id`, `user_id`, `name`, `species`, `breed`, `gender`, `birthday`, `weight_kg`, `avatar`, `health_status`, `neutered`, `status`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(40001, 12, '大黄', '狗', '金毛寻回犬', '公', DATE_SUB(CURDATE(), INTERVAL 36 MONTH), 28.50, '/profile/pet/adoptions/dahuang-golden-retriever.png', '领养后状态稳定，需继续关注耳部清洁。', 1, 0, 'content', DATE_SUB(NOW(), INTERVAL 45 DAY), 'content', NOW(), '由领养完成生成的宠物档案')
-ON DUPLICATE KEY UPDATE
-  `user_id` = VALUES(`user_id`),
-  `name` = VALUES(`name`),
-  `species` = VALUES(`species`),
-  `breed` = VALUES(`breed`),
-  `gender` = VALUES(`gender`),
-  `birthday` = VALUES(`birthday`),
-  `weight_kg` = VALUES(`weight_kg`),
-  `avatar` = VALUES(`avatar`),
-  `health_status` = VALUES(`health_status`),
-  `neutered` = VALUES(`neutered`),
-  `status` = VALUES(`status`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
-
-INSERT INTO `pet_health_record` (`id`, `user_id`, `pet_id`, `record_type`, `record_date`, `next_due_date`, `title`, `description`, `attachment_urls`, `boarding_relation_id`, `source_record_id`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(50001, 12, 40001, 'checkup', DATE_SUB(CURDATE(), INTERVAL 14 DAY), DATE_ADD(CURDATE(), INTERVAL 16 DAY), '领养后 30 天复查', '体重稳定，精神状态良好，右耳轻微发红，医生建议清洁观察。', '/profile/pet/adoptions/dahuang-golden-retriever.png', NULL, NULL, 'content', DATE_SUB(NOW(), INTERVAL 14 DAY), 'content', NOW(), '运营内容')
-ON DUPLICATE KEY UPDATE
-  `user_id` = VALUES(`user_id`),
-  `pet_id` = VALUES(`pet_id`),
-  `record_type` = VALUES(`record_type`),
-  `record_date` = VALUES(`record_date`),
-  `next_due_date` = VALUES(`next_due_date`),
-  `title` = VALUES(`title`),
-  `description` = VALUES(`description`),
-  `attachment_urls` = VALUES(`attachment_urls`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
-
-INSERT INTO `pet_reminder` (`id`, `user_id`, `pet_id`, `reminder_type`, `title`, `due_time`, `status`, `repeat_rule`, `notice_sent`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(60001, 12, 40001, 'followup', '大黄 90 天领养回访', DATE_ADD(NOW(), INTERVAL 45 DAY), 0, '', 0, 'content', DATE_SUB(NOW(), INTERVAL 1 DAY), 'content', NOW(), '运营内容')
-ON DUPLICATE KEY UPDATE
-  `user_id` = VALUES(`user_id`),
-  `pet_id` = VALUES(`pet_id`),
-  `reminder_type` = VALUES(`reminder_type`),
-  `title` = VALUES(`title`),
-  `due_time` = VALUES(`due_time`),
-  `status` = VALUES(`status`),
-  `repeat_rule` = VALUES(`repeat_rule`),
-  `notice_sent` = VALUES(`notice_sent`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
-
 INSERT INTO `pet_merchant` (`id`, `user_id`, `name`, `contact_name`, `phone`, `city`, `district`, `address`, `longitude`, `latitude`, `qualification_status`, `status`, `description`, `logo_url`, `score`, `review_count`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(70001, 14, '安心宠物诊所', '何医生', '020-88886666', '广州', '天河区', '天河区花城大道 88 号', 113.324520, 23.119210, 1, 0, '提供领养后体检、疫苗、绝育、行为咨询和营养建议。', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', 4.80, 126, 'content', DATE_SUB(NOW(), INTERVAL 90 DAY), 'content', NOW(), '运营内容')
+(70001, 1, '安心宠物诊所', '何医生', '020-88886666', '广州', '天河区', '天河区花城大道 88 号', 113.324520, 23.119210, 1, 0, '提供领养后体检、疫苗、绝育、行为咨询和营养建议。', '/profile/pet/adoptions/naiyou-tuxedo-cat.png', 0.00, 0, 'admin', DATE_SUB(NOW(), INTERVAL 90 DAY), 'admin', NOW(), '默认服务商家')
 ON DUPLICATE KEY UPDATE
   `user_id` = VALUES(`user_id`),
   `name` = VALUES(`name`),
@@ -1041,9 +917,9 @@ ON DUPLICATE KEY UPDATE
   `remark` = VALUES(`remark`);
 
 INSERT INTO `pet_service_item` (`id`, `merchant_id`, `service_name`, `service_type`, `description`, `price_min`, `price_max`, `cover_url`, `status`, `review_score`, `review_count`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(71001, 70001, '领养后基础体检套餐', 'medical', '包含体格检查、皮肤耳道检查、粪检建议和基础照护指导，适合刚完成领养的猫狗。', 128.00, 268.00, '/profile/pet/adoptions/dahuang-golden-retriever.png', 0, 4.80, 82, 'content', DATE_SUB(NOW(), INTERVAL 80 DAY), 'content', NOW(), '运营内容'),
-(71002, 70001, '猫犬疫苗补种咨询', 'medical', '根据既往免疫记录制定补种计划，并提醒后续时间节点。', 39.00, 99.00, '/profile/pet/adoptions/xiaotang-orange-tabby.png', 0, 4.70, 44, 'content', DATE_SUB(NOW(), INTERVAL 70 DAY), 'content', NOW(), '运营内容'),
-(71003, 70001, '新家庭适应行为指导', 'training', '围绕分离焦虑、牵引、猫咪躲藏和多宠磨合给出家庭训练建议。', 99.00, 299.00, '/profile/pet/adoptions/doubao-mix-dog.png', 0, 4.90, 37, 'content', DATE_SUB(NOW(), INTERVAL 60 DAY), 'content', NOW(), '运营内容')
+(71001, 70001, '领养后基础体检套餐', 'medical', '包含体格检查、皮肤耳道检查、粪检建议和基础照护指导，适合刚完成领养的猫狗。', 128.00, 268.00, '/profile/pet/adoptions/dahuang-golden-retriever.png', 0, 0.00, 0, 'admin', DATE_SUB(NOW(), INTERVAL 80 DAY), 'admin', NOW(), '默认服务内容'),
+(71002, 70001, '猫犬疫苗补种咨询', 'medical', '根据既往免疫记录制定补种计划，并提醒后续时间节点。', 39.00, 99.00, '/profile/pet/adoptions/xiaotang-orange-tabby.png', 0, 0.00, 0, 'admin', DATE_SUB(NOW(), INTERVAL 70 DAY), 'admin', NOW(), '默认服务内容'),
+(71003, 70001, '新家庭适应行为指导', 'training', '围绕分离焦虑、牵引、猫咪躲藏和多宠磨合给出家庭训练建议。', 99.00, 299.00, '/profile/pet/adoptions/doubao-mix-dog.png', 0, 0.00, 0, 'admin', DATE_SUB(NOW(), INTERVAL 60 DAY), 'admin', NOW(), '默认服务内容')
 ON DUPLICATE KEY UPDATE
   `merchant_id` = VALUES(`merchant_id`),
   `service_name` = VALUES(`service_name`),
@@ -1059,27 +935,10 @@ ON DUPLICATE KEY UPDATE
   `update_time` = VALUES(`update_time`),
   `remark` = VALUES(`remark`);
 
-INSERT INTO `pet_service_review` (`id`, `user_id`, `service_id`, `merchant_id`, `request_id`, `rating`, `content`, `image_urls`, `status`, `hide_status`, `hide_reason`, `hide_audit_reason`, `top_flag`, `top_time`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(72001, 12, 71001, 70001, NULL, 5, '领养后第一次体检很细，医生把耳道护理和运动量都说明清楚了。', '/profile/pet/adoptions/dahuang-golden-retriever.png', 1, 0, '', '', 1, DATE_SUB(NOW(), INTERVAL 10 DAY), 'content', DATE_SUB(NOW(), INTERVAL 10 DAY), 'content', NOW(), '运营内容')
-ON DUPLICATE KEY UPDATE
-  `user_id` = VALUES(`user_id`),
-  `service_id` = VALUES(`service_id`),
-  `merchant_id` = VALUES(`merchant_id`),
-  `rating` = VALUES(`rating`),
-  `content` = VALUES(`content`),
-  `image_urls` = VALUES(`image_urls`),
-  `status` = VALUES(`status`),
-  `hide_status` = VALUES(`hide_status`),
-  `top_flag` = VALUES(`top_flag`),
-  `top_time` = VALUES(`top_time`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
-
 INSERT INTO `pet_post` (`id`, `author_id`, `pet_id`, `title`, `content`, `post_type`, `cover_url`, `audit_status`, `visibility`, `status`, `like_count`, `comment_count`, `favorite_count`, `view_count`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(80001, 10, NULL, '小糖进入领养大厅', '小糖已完成基础体检和驱虫，性格亲人安静。希望领养家庭能做好封窗，并继续完成后续疫苗。', 'image', '/profile/pet/adoptions/xiaotang-orange-tabby.png', 1, 0, 0, 36, 4, 12, 318, 'content', DATE_SUB(NOW(), INTERVAL 5 DAY), 'content', NOW(), '运营内容'),
-(80002, 12, 40001, '大黄到家 30 天记录', '大黄已经适应新家，每天早晚散步。复查整体正常，接下来会继续配合 90 天回访。', 'image', '/profile/pet/adoptions/dahuang-golden-retriever.png', 1, 0, 0, 58, 9, 18, 462, 'content', DATE_SUB(NOW(), INTERVAL 12 DAY), 'content', NOW(), '运营内容'),
-(80003, 11, NULL, '豆包适合怎样的家庭', '豆包很亲人，也需要稳定的外出运动。更适合有固定作息、愿意每天牵引散步的领养人。', 'image', '/profile/pet/adoptions/doubao-mix-dog.png', 1, 0, 0, 24, 3, 7, 196, 'content', DATE_SUB(NOW(), INTERVAL 3 DAY), 'content', NOW(), '运营内容')
+(80001, 1, NULL, '小糖进入领养大厅', '小糖已完成基础体检和驱虫，性格亲人安静。希望领养家庭能做好封窗，并继续完成后续疫苗。', 'image', '/profile/pet/adoptions/xiaotang-orange-tabby.png', 1, 0, 0, 36, 4, 12, 318, 'admin', DATE_SUB(NOW(), INTERVAL 5 DAY), 'admin', NOW(), '默认内容'),
+(80002, 1, NULL, '大黄等待新家庭', '大黄性格温和，服从性好，适合有大犬活动空间的家庭。', 'image', '/profile/pet/adoptions/dahuang-golden-retriever.png', 1, 0, 0, 42, 5, 11, 286, 'admin', DATE_SUB(NOW(), INTERVAL 4 DAY), 'admin', NOW(), '默认内容'),
+(80003, 1, NULL, '豆包适合怎样的家庭', '豆包很亲人，也需要稳定的外出运动。更适合有固定作息、愿意每天牵引散步的领养人。', 'image', '/profile/pet/adoptions/doubao-mix-dog.png', 1, 0, 0, 24, 3, 7, 196, 'admin', DATE_SUB(NOW(), INTERVAL 3 DAY), 'admin', NOW(), '默认内容')
 ON DUPLICATE KEY UPDATE
   `author_id` = VALUES(`author_id`),
   `pet_id` = VALUES(`pet_id`),
@@ -1115,41 +974,6 @@ INSERT INTO `pet_post_topic` (`id`, `post_id`, `topic_id`) VALUES
 ON DUPLICATE KEY UPDATE
   `post_id` = VALUES(`post_id`),
   `topic_id` = VALUES(`topic_id`);
-
-INSERT INTO `pet_audit_record` (`id`, `auditor_id`, `target_type`, `target_id`, `audit_status`, `audit_reason`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(83001, 1, 'adoption_pet', 10001, 2, '资料完整，照片清晰，准予进入领养大厅。', 'content', DATE_SUB(NOW(), INTERVAL 6 DAY), 'content', NOW(), '运营内容'),
-(83002, 1, 'adoption_pet', 10002, 2, '通过审核，可公开申请。', 'content', DATE_SUB(NOW(), INTERVAL 5 DAY), 'content', NOW(), '运营内容'),
-(83003, 1, 'adoption_pet', 10003, 2, '资料完整，准予发布。', 'content', DATE_SUB(NOW(), INTERVAL 11 DAY), 'content', NOW(), '运营内容'),
-(83004, 1, 'adoption_pet', 10006, 6, '疫苗记录暂不完整，请补充材料后重新提交。', 'content', DATE_SUB(NOW(), INTERVAL 3 DAY), 'content', NOW(), '运营内容')
-ON DUPLICATE KEY UPDATE
-  `auditor_id` = VALUES(`auditor_id`),
-  `target_type` = VALUES(`target_type`),
-  `target_id` = VALUES(`target_id`),
-  `audit_status` = VALUES(`audit_status`),
-  `audit_reason` = VALUES(`audit_reason`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
-
-INSERT INTO `pet_notification` (`id`, `receiver_user_id`, `actor_user_id`, `notice_type`, `target_type`, `target_id`, `title`, `content`, `action_url`, `status`, `read_time`, `create_by`, `create_time`, `update_by`, `update_time`, `remark`) VALUES
-(84001, 10, 1, 'adoption_audit', 'adoption_pet', 10001, '待领养宠物审核通过', '宠物「小糖」已进入领养大厅。', '/adoptions/10001', 0, NULL, 'content', DATE_SUB(NOW(), INTERVAL 6 DAY), 'content', NOW(), '运营内容'),
-(84002, 10, 13, 'adoption_apply', 'adoption_application', 20002, '收到新的领养申请', '吴小满申请领养「小糖」，请及时处理。', '/adoption-manage?tab=received', 0, NULL, 'content', DATE_SUB(NOW(), INTERVAL 1 DAY), 'content', NOW(), '运营内容'),
-(84003, 12, 10, 'adoption_application_status', 'adoption_application', 20003, '领养申请已预约看宠', '奶油的看宠时间已确认，请按时到场。', '/adoption-manage?tab=mine', 0, NULL, 'content', DATE_SUB(NOW(), INTERVAL 1 DAY), 'content', NOW(), '运营内容'),
-(84004, 12, 1, 'adoption_followup_handle', 'adoption_followup', 30002, '回访异常待处理', '平台已收到大黄第二次回访异常，请按诊所建议完成复查。', '/adoption-manage?tab=followups', 0, NULL, 'content', DATE_SUB(NOW(), INTERVAL 1 DAY), 'content', NOW(), '运营内容')
-ON DUPLICATE KEY UPDATE
-  `receiver_user_id` = VALUES(`receiver_user_id`),
-  `actor_user_id` = VALUES(`actor_user_id`),
-  `notice_type` = VALUES(`notice_type`),
-  `target_type` = VALUES(`target_type`),
-  `target_id` = VALUES(`target_id`),
-  `title` = VALUES(`title`),
-  `content` = VALUES(`content`),
-  `action_url` = VALUES(`action_url`),
-  `status` = VALUES(`status`),
-  `read_time` = VALUES(`read_time`),
-  `update_by` = VALUES(`update_by`),
-  `update_time` = VALUES(`update_time`),
-  `remark` = VALUES(`remark`);
 
 UPDATE `pet_topic` t
 SET `post_count` = (

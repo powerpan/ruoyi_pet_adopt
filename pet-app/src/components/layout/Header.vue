@@ -200,7 +200,7 @@ export default {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%) rotate(-8deg);
-  color: rgba(18, 86, 78, .24);
+  color: rgba(18, 86, 78, .1);
   font-size: 46px;
   font-weight: 300;
   line-height: .8;

@@ -30,3 +30,27 @@ deploy/.env
 uploadPath/
 .codex/
 .agents/
+
+# Local-only docs, launch helpers, and deployment helpers
+.dockerignore
+README.md
+docs/
+bin/
+scripts/
+deploy/
+launcher.bat
+launcher.command
+launcher.ps1
+ry.bat
+ry.sh
+start-dev.bat
+start-dev.command
+start.bat
+start.command
+stop-dev.bat
+stop-dev.command
+stop.bat
+stop.command
+pet-app/README.md
+ruoyi-ui/README.md
+ruoyi-ui/bin/
