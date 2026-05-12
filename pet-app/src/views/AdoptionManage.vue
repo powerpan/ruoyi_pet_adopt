@@ -93,9 +93,11 @@
             </el-table-column>
             <el-table-column prop="reviewReason" label="处理意见" min-width="180" show-overflow-tooltip />
             <el-table-column prop="visitTime" label="看宠时间" width="160" />
-            <el-table-column label="操作" width="120">
+            <el-table-column label="操作" width="220">
               <template slot-scope="scope">
                 <el-button size="mini" type="text" @click="$router.push('/adoptions/' + scope.row.adoptionPetId)">查看宠物</el-button>
+                <el-button size="mini" type="text" :disabled="!canSupplementApplication(scope.row)" @click="openMyApplication(scope.row)">补充资料</el-button>
+                <el-button size="mini" type="text" class="danger-text" :disabled="!canWithdrawApplication(scope.row)" @click="withdrawApplication(scope.row)">撤回</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -181,6 +183,22 @@
       </div>
     </el-dialog>
 
+    <el-dialog title="补充领养申请" :visible.sync="myApplicationDialog" width="620px">
+      <el-form label-width="92px" class="apply-form">
+        <el-form-item label="真实姓名"><el-input v-model="myApplicationForm.realName" maxlength="64" /></el-form-item>
+        <el-form-item label="联系电话"><el-input v-model="myApplicationForm.phone" maxlength="32" /></el-form-item>
+        <el-form-item label="所在城市"><el-input v-model="myApplicationForm.city" maxlength="64" /></el-form-item>
+        <el-form-item label="居住情况"><el-input v-model="myApplicationForm.housingType" maxlength="64" /></el-form-item>
+        <el-form-item label="养宠经验"><el-input v-model="myApplicationForm.petExperience" type="textarea" :rows="3" maxlength="500" show-word-limit /></el-form-item>
+        <el-form-item label="申请理由"><el-input v-model="myApplicationForm.applyReason" type="textarea" :rows="3" maxlength="1000" show-word-limit /></el-form-item>
+        <el-form-item label="领养承诺"><el-input v-model="myApplicationForm.commitment" type="textarea" :rows="3" maxlength="1000" show-word-limit /></el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="myApplicationDialog = false">取消</el-button>
+        <el-button type="primary" :loading="savingMyApplication" @click="saveMyApplication">提交补充</el-button>
+      </div>
+    </el-dialog>
+
     <el-dialog title="提交回访" :visible.sync="followupDialog" width="620px">
       <el-form label-width="92px">
         <el-form-item label="健康情况"><el-input v-model="followupForm.healthStatus" maxlength="255" /></el-form-item>
@@ -207,7 +225,9 @@ import {
   listReceivedAdoptionApplications,
   submitAdoptionFollowup,
   updateAdoption,
-  updateAdoptionApplicationStatus
+  updateAdoptionApplicationStatus,
+  updateMyAdoptionApplication,
+  withdrawAdoptionApplication
 } from '@/api/pet'
 
 export default {
@@ -223,12 +243,16 @@ export default {
       loading: { published: false, mine: false, received: false, followups: false },
       savingPet: false,
       savingApplication: false,
+      savingMyApplication: false,
       savingFollowup: false,
       applicationDialog: false,
+      myApplicationDialog: false,
       followupDialog: false,
       activeApplication: {},
+      activeMyApplication: {},
       activeFollowup: {},
       applicationForm: this.emptyApplicationForm(),
+      myApplicationForm: this.emptyMyApplicationForm(),
       followupForm: this.emptyFollowupForm()
     }
   },
@@ -245,6 +269,18 @@ export default {
     },
     emptyApplicationForm() {
       return { id: null, status: 1, visitTime: '', visitAddress: '', reviewReason: '' }
+    },
+    emptyMyApplicationForm() {
+      return {
+        id: null,
+        realName: '',
+        phone: '',
+        city: '',
+        housingType: '',
+        petExperience: '',
+        applyReason: '',
+        commitment: ''
+      }
     },
     emptyFollowupForm() {
       return { healthStatus: '', livingStatus: '', imageUrls: '', abnormalReason: '' }
@@ -341,6 +377,43 @@ export default {
         this.savingApplication = false
       })
     },
+    openMyApplication(row) {
+      this.activeMyApplication = row
+      this.myApplicationForm = {
+        ...this.emptyMyApplicationForm(),
+        id: row.id,
+        realName: row.realName || '',
+        phone: row.phone || '',
+        city: row.city || '',
+        housingType: row.housingType || '',
+        petExperience: row.petExperience || '',
+        applyReason: row.applyReason || '',
+        commitment: row.commitment || ''
+      }
+      this.myApplicationDialog = true
+    },
+    saveMyApplication() {
+      if (!this.myApplicationForm.realName || !this.myApplicationForm.phone) {
+        this.$message.warning('请填写真实姓名和联系电话')
+        return
+      }
+      this.savingMyApplication = true
+      updateMyAdoptionApplication(this.myApplicationForm).then(() => {
+        this.$message.success('资料已补充，申请重新进入待处理')
+        this.myApplicationDialog = false
+        this.loadMine()
+      }).finally(() => {
+        this.savingMyApplication = false
+      })
+    },
+    withdrawApplication(row) {
+      this.$confirm(`确认撤回「${row.petName || row.id}」的领养申请吗？`, '撤回申请', { type: 'warning' }).then(() => {
+        return withdrawAdoptionApplication(row.id)
+      }).then(() => {
+        this.$message.success('申请已撤回')
+        this.loadMine()
+      }).catch(() => {})
+    },
     confirmAdoption(row) {
       this.$confirm(`确认将「${row.petName}」交由 ${row.applicantName || row.realName} 领养吗？`, '确认领养', { type: 'warning' }).then(() => {
         return confirmAdoptionApplication(row.id)
@@ -375,6 +448,12 @@ export default {
     },
     applicationStatusTag(status) {
       return ({ 0: 'warning', 1: 'success', 2: 'warning', 3: 'danger', 4: 'info', 5: 'success', 6: 'success', 7: 'info' })[status] || ''
+    },
+    canSupplementApplication(row) {
+      return [0, 2].indexOf(Number(row.status)) !== -1
+    },
+    canWithdrawApplication(row) {
+      return [0, 1, 2, 5].indexOf(Number(row.status)) !== -1
     },
     followupStatus(status) {
       return ({ 0: '待回访', 1: '已提交', 2: '正常归档', 3: '异常待处理', 4: '已关闭' })[status] || '未知'

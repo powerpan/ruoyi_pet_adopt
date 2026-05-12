@@ -31,6 +31,7 @@ import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.pet.domain.*;
@@ -595,9 +596,15 @@ public class PetAppController extends BaseController {
 
     @PostMapping("/service-requests")
     public R<Long> addServiceRequest(@RequestBody PetServiceRequest request) {
+        if (request == null || request.getServiceId() == null) {
+            return R.fail("请选择要预约的服务");
+        }
         PetServiceItem service = visibleService(request.getServiceId());
         if (service == null) {
             return R.fail("服务已下架或商家未通过审核");
+        }
+        if (request.getPetId() != null && !isOwnedPet(request.getPetId())) {
+            return R.fail("宠物档案不存在或无权用于预约");
         }
         request.setUserId(SecurityUtils.getUserId());
         request.setMerchantId(service.getMerchantId());
@@ -679,7 +686,13 @@ public class PetAppController extends BaseController {
         update.setRemark(request.getRemark());
         update.setUpdateBy(SecurityUtils.getUsername());
         update.setUpdateTime(new Date());
-        int rows = serviceRequestMapper.updateById(update);
+        int rows = serviceRequestMapper.update(update, new UpdateWrapper<PetServiceRequest>()
+                .eq("id", exists.getId())
+                .eq("merchant_id", exists.getMerchantId())
+                .eq("status", exists.getStatus()));
+        if (rows == 0) {
+            return R.fail("订单状态已变化，请刷新后重试");
+        }
         if (rows > 0) {
             notificationService.create(exists.getUserId(), SecurityUtils.getUserId(), "service_request_status", "service_request",
                     exists.getId(), requestStatusTitle(request.getStatus()),
@@ -875,8 +888,9 @@ public class PetAppController extends BaseController {
     @PostMapping("/boarding/relations/{id:[0-9]+}/approve")
     @Transactional(rollbackFor = Exception.class)
     public R<Integer> approveBoardingRelation(@PathVariable Long id) {
+        Long userId = SecurityUtils.getUserId();
         PetBoardingRelation relation = boardingRelationMapper.selectById(id);
-        if (relation == null || !SecurityUtils.getUserId().equals(relation.getOwnerUserId())) {
+        if (relation == null || !userId.equals(relation.getOwnerUserId())) {
             return R.fail("寄养请求不存在或无权处理");
         }
         if (relation.getStatus() == null || relation.getStatus() != 0) {
@@ -888,16 +902,30 @@ public class PetAppController extends BaseController {
         if (merchant == null || ownerPet == null) {
             return R.fail("寄养请求关联的商家或宠物不存在");
         }
+        Date now = new Date();
+        int claimed = boardingRelationMapper.update(null, new UpdateWrapper<PetBoardingRelation>()
+                .eq("id", relation.getId())
+                .eq("owner_user_id", userId)
+                .eq("status", 0)
+                .set("status", 1)
+                .set("confirm_time", now)
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", now));
+        if (claimed == 0) {
+            return R.fail("该寄养请求已处理，请刷新后查看");
+        }
         PetProfile merchantPet = copyPetForBoarding(ownerPet, relation, merchant);
         copyHealthRecordsForBoarding(ownerPet, merchantPet, relation);
-        PetBoardingRelation update = new PetBoardingRelation();
-        update.setId(relation.getId());
-        update.setMerchantPetId(merchantPet.getId());
-        update.setStatus(1);
-        update.setConfirmTime(new Date());
-        update.setUpdateBy(SecurityUtils.getUsername());
-        update.setUpdateTime(new Date());
-        int rows = boardingRelationMapper.updateById(update);
+        int rows = boardingRelationMapper.update(null, new UpdateWrapper<PetBoardingRelation>()
+                .eq("id", relation.getId())
+                .eq("status", 1)
+                .isNull("merchant_pet_id")
+                .set("merchant_pet_id", merchantPet.getId())
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", new Date()));
+        if (rows == 0) {
+            throw new ServiceException("寄养请求状态已变化，请刷新后重试");
+        }
         notificationService.create(relation.getMerchantUserId(), SecurityUtils.getUserId(), "boarding_approved", "boarding_relation",
                 relation.getId(), "客户已同意寄养档案授权",
                 "宠物「" + relation.getPetName() + "」的档案已复制到商家寄养档案。", "/pets");
@@ -1049,10 +1077,25 @@ public class PetAppController extends BaseController {
 
     @DeleteMapping("/adoptions/{ids:[0-9,]+}")
     public R<Integer> deleteAdoptions(@PathVariable Long[] ids) {
-        return R.ok(adoptionPetMapper.delete(new QueryWrapper<PetAdoptionPet>()
-                .in("id", Arrays.asList(ids))
+        List<Long> idList = Arrays.asList(ids);
+        List<Long> deletableIds = adoptionPetMapper.selectObjs(new QueryWrapper<PetAdoptionPet>()
+                .select("id")
+                .in("id", idList)
                 .eq("publisher_user_id", SecurityUtils.getUserId())
-                .in("status", Arrays.asList(0, 5, 6))));
+                .in("status", Arrays.asList(0, 5, 6)))
+                .stream().map(item -> Long.valueOf(String.valueOf(item))).collect(java.util.stream.Collectors.toList());
+        if (deletableIds.isEmpty()) {
+            return R.ok(0);
+        }
+        long applicationCount = adoptionApplicationMapper.selectCount(new QueryWrapper<PetAdoptionApplication>()
+                .in("adoption_pet_id", deletableIds));
+        long followupCount = adoptionFollowupMapper.selectCount(new QueryWrapper<PetAdoptionFollowup>()
+                .in("adoption_pet_id", deletableIds));
+        if (applicationCount > 0 || followupCount > 0) {
+            return R.fail("待领养宠物已有申请或回访记录，请改为下架以保留业务历史");
+        }
+        return R.ok(adoptionPetMapper.delete(new QueryWrapper<PetAdoptionPet>()
+                .in("id", deletableIds)));
     }
 
     @PostMapping("/adoptions/{id:[0-9]+}/applications")
@@ -1126,17 +1169,119 @@ public class PetAppController extends BaseController {
         update.setVisitAddress(application.getVisitAddress());
         update.setUpdateBy(SecurityUtils.getUsername());
         update.setUpdateTime(new Date());
-        int rows = adoptionApplicationMapper.updateById(update);
         if (application.getStatus() != null && application.getStatus() == 5) {
-            adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
-                    .eq("id", pet.getId()).in("status", Arrays.asList(2, 3))
+            long scheduledCount = adoptionApplicationMapper.selectCount(new QueryWrapper<PetAdoptionApplication>()
+                    .eq("adoption_pet_id", pet.getId())
+                    .ne("id", exists.getId())
+                    .eq("status", 5));
+            if (scheduledCount > 0) {
+                return R.fail("该宠物已有预约中的申请，请先处理原预约");
+            }
+            if (pet.getStatus() != null && pet.getStatus() != 2 && pet.getStatus() != 3) {
+                return R.fail("当前宠物状态不能安排看宠预约");
+            }
+        }
+        int rows = adoptionApplicationMapper.update(update, new UpdateWrapper<PetAdoptionApplication>()
+                .eq("id", exists.getId())
+                .eq("publisher_user_id", SecurityUtils.getUserId())
+                .eq("status", exists.getStatus()));
+        if (rows == 0) {
+            return R.fail("申请状态已变化，请刷新后重试");
+        }
+        if (application.getStatus() != null && application.getStatus() == 5) {
+            int petRows = adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
+                    .eq("id", pet.getId())
+                    .in("status", Arrays.asList(2, 3))
                     .set("status", 3)
                     .set("update_by", SecurityUtils.getUsername())
                     .set("update_time", new Date()));
+            if (petRows == 0) {
+                throw new ServiceException("宠物状态已变化，请刷新后重试");
+            }
+        } else if (exists.getStatus() != null && exists.getStatus() == 5) {
+            refreshAdoptionReservationState(pet.getId());
         }
         notificationService.create(exists.getApplicantUserId(), SecurityUtils.getUserId(), "adoption_application_status", "adoption_application",
                 exists.getId(), adoptionApplicationStatusTitle(application.getStatus()),
                 defaultReviewReason(application.getReviewReason(), "宠物「" + pet.getName() + "」的领养申请状态已更新。"), "/adoption-manage");
+        return R.ok(rows);
+    }
+
+    @PutMapping("/adoption-applications")
+    public R<Integer> updateMyAdoptionApplication(@RequestBody PetAdoptionApplication application) {
+        if (application == null || application.getId() == null) {
+            return R.fail("领养申请不存在");
+        }
+        PetAdoptionApplication exists = adoptionApplicationMapper.selectById(application.getId());
+        Long userId = SecurityUtils.getUserId();
+        if (exists == null || !userId.equals(exists.getApplicantUserId())) {
+            return R.fail("领养申请不存在或无权修改");
+        }
+        if (exists.getStatus() == null || (exists.getStatus() != 0 && exists.getStatus() != 2)) {
+            return R.fail("当前申请状态不能补充资料");
+        }
+        if (StringUtils.isEmpty(application.getRealName()) || StringUtils.isEmpty(application.getPhone())) {
+            return R.fail("请填写真实姓名和联系电话");
+        }
+        PetAdoptionPet pet = adoptionPetMapper.selectById(exists.getAdoptionPetId());
+        if (pet == null || pet.getStatus() == null || pet.getStatus() == 4) {
+            return R.fail("待领养宠物不存在或已完成领养");
+        }
+        PetAdoptionApplication update = new PetAdoptionApplication();
+        update.setId(exists.getId());
+        update.setRealName(application.getRealName());
+        update.setPhone(application.getPhone());
+        update.setCity(application.getCity());
+        update.setHousingType(application.getHousingType());
+        update.setPetExperience(application.getPetExperience());
+        update.setApplyReason(application.getApplyReason());
+        update.setCommitment(application.getCommitment());
+        update.setStatus(0);
+        update.setReviewReason("");
+        update.setUpdateBy(SecurityUtils.getUsername());
+        update.setUpdateTime(new Date());
+        int rows = adoptionApplicationMapper.update(update, new UpdateWrapper<PetAdoptionApplication>()
+                .eq("id", exists.getId())
+                .eq("applicant_user_id", userId)
+                .in("status", Arrays.asList(0, 2)));
+        if (rows > 0) {
+            notificationService.create(exists.getPublisherUserId(), userId, "adoption_application_update", "adoption_application",
+                    exists.getId(), "领养申请已补充资料", "宠物「" + pet.getName() + "」的领养申请已补充资料，请重新处理。", "/adoption-manage");
+        }
+        return R.ok(rows);
+    }
+
+    @PostMapping("/adoption-applications/{id:[0-9]+}/withdraw")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Integer> withdrawAdoptionApplication(@PathVariable Long id) {
+        PetAdoptionApplication exists = adoptionApplicationMapper.selectById(id);
+        Long userId = SecurityUtils.getUserId();
+        if (exists == null || !userId.equals(exists.getApplicantUserId())) {
+            return R.fail("领养申请不存在或无权撤回");
+        }
+        if (isTerminalAdoptionApplication(exists.getStatus())) {
+            return R.fail("已结束的申请不能撤回");
+        }
+        Date now = new Date();
+        int rows = adoptionApplicationMapper.update(null, new UpdateWrapper<PetAdoptionApplication>()
+                .eq("id", exists.getId())
+                .eq("applicant_user_id", userId)
+                .eq("status", exists.getStatus())
+                .set("status", 4)
+                .set("review_reason", "申请人主动撤回")
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", now));
+        if (rows == 0) {
+            return R.fail("申请状态已变化，请刷新后重试");
+        }
+        if (exists.getStatus() != null && exists.getStatus() == 5) {
+            refreshAdoptionReservationState(exists.getAdoptionPetId());
+        }
+        PetAdoptionPet pet = adoptionPetMapper.selectById(exists.getAdoptionPetId());
+        notificationService.create(exists.getPublisherUserId(), userId, "adoption_application_withdraw", "adoption_application",
+                exists.getId(), "领养申请已撤回",
+                pet == null ? "有一条领养申请已由申请人撤回。" : "宠物「" + pet.getName() + "」的一条领养申请已由申请人撤回。",
+                "/adoption-manage");
         return R.ok(rows);
     }
 
@@ -1164,13 +1309,21 @@ public class PetAppController extends BaseController {
         if (rows == 0) {
             return R.fail("申请状态已变化，请刷新后重试");
         }
-        adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
+        int petRows = adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
                 .eq("id", pet.getId())
+                .in("status", Arrays.asList(2, 3))
                 .set("status", 4)
                 .set("adopted_user_id", application.getApplicantUserId())
                 .set("adopted_time", now)
                 .set("update_by", SecurityUtils.getUsername())
                 .set("update_time", now));
+        if (petRows == 0) {
+            throw new ServiceException("宠物状态已变化，请刷新后重试");
+        }
+        List<PetAdoptionApplication> autoClosedApplications = adoptionApplicationMapper.selectList(new QueryWrapper<PetAdoptionApplication>()
+                .eq("adoption_pet_id", pet.getId())
+                .ne("id", id)
+                .notIn("status", Arrays.asList(3, 4, 6, 7)));
         adoptionApplicationMapper.update(null, new UpdateWrapper<PetAdoptionApplication>()
                 .eq("adoption_pet_id", pet.getId())
                 .ne("id", id)
@@ -1179,6 +1332,11 @@ public class PetAppController extends BaseController {
                 .set("review_reason", "该宠物已完成领养，其他申请自动关闭")
                 .set("update_by", SecurityUtils.getUsername())
                 .set("update_time", now));
+        for (PetAdoptionApplication closed : autoClosedApplications) {
+            notificationService.create(closed.getApplicantUserId(), SecurityUtils.getUserId(), "adoption_application_status", "adoption_application",
+                    closed.getId(), "领养申请已关闭",
+                    "宠物「" + pet.getName() + "」已完成领养，你的申请已自动关闭。", "/adoption-manage");
+        }
         createProfileFromAdoption(pet, application.getApplicantUserId());
         createAdoptionFollowupPlans(application, pet, now);
         notificationService.create(application.getApplicantUserId(), SecurityUtils.getUserId(), "adoption_confirmed", "adoption_application",
@@ -1630,6 +1788,23 @@ public class PetAppController extends BaseController {
 
     private boolean isPublicAdoptionStatus(Integer status) {
         return status != null && (status == 2 || status == 3 || status == 4);
+    }
+
+    private void refreshAdoptionReservationState(Long adoptionPetId) {
+        if (adoptionPetId == null) {
+            return;
+        }
+        long scheduledCount = adoptionApplicationMapper.selectCount(new QueryWrapper<PetAdoptionApplication>()
+                .eq("adoption_pet_id", adoptionPetId)
+                .eq("status", 5));
+        if (scheduledCount == 0) {
+            adoptionPetMapper.update(null, new UpdateWrapper<PetAdoptionPet>()
+                    .eq("id", adoptionPetId)
+                    .eq("status", 3)
+                    .set("status", 2)
+                    .set("update_by", SecurityUtils.getUsername())
+                    .set("update_time", new Date()));
+        }
     }
 
     private boolean isAllowedAdoptionApplicationStatus(Integer status) {

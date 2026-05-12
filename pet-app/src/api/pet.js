@@ -156,6 +156,14 @@ export function updateAdoptionApplicationStatus(data) {
   return request({ url: '/app/pet/adoption-applications/status', method: 'put', data })
 }
 
+export function updateMyAdoptionApplication(data) {
+  return request({ url: '/app/pet/adoption-applications', method: 'put', data })
+}
+
+export function withdrawAdoptionApplication(id) {
+  return request({ url: `/app/pet/adoption-applications/${id}/withdraw`, method: 'post' })
+}
+
 export function confirmAdoptionApplication(id) {
   return request({ url: `/app/pet/adoption-applications/${id}/confirm`, method: 'post' })
 }

@@ -186,8 +186,8 @@
                     <configuration>
                         <trimStackTrace>true</trimStackTrace>
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                        <!-- 减轻部分 JDK 上 Class Data Sharing 提示；与 Mockito agent 兼容 -->
-                        <argLine>-Xshare:off -XX:+EnableDynamicAgentLoading</argLine>
+                        <!-- 减轻部分 JDK 上 Class Data Sharing 提示；保持 Java 8 兼容 -->
+                        <argLine>-Xshare:off</argLine>
                     </configuration>
                 </plugin>
             </plugins>

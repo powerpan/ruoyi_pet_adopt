@@ -54,13 +54,17 @@ public class PetNotificationService {
                 .eq("notice_sent", 0)
                 .le("due_time", new Date()));
         for (PetReminder reminder : reminders) {
-            create(userId, null, "reminder_due", "reminder", reminder.getId(),
-                    "健康提醒已到期", reminder.getTitle(), "/health");
-            reminderMapper.update(null, new UpdateWrapper<PetReminder>()
+            int claimed = reminderMapper.update(null, new UpdateWrapper<PetReminder>()
                     .eq("id", reminder.getId())
                     .eq("user_id", userId)
+                    .eq("status", 0)
+                    .eq("notice_sent", 0)
                     .set("status", 2)
                     .set("notice_sent", 1));
+            if (claimed > 0) {
+                create(userId, null, "reminder_due", "reminder", reminder.getId(),
+                        "健康提醒已到期", reminder.getTitle(), "/health");
+            }
         }
     }
 

@@ -8,14 +8,22 @@
 # 环境变量：
 #   VERBOSE=1       关闭 Maven -q，输出完整 [INFO] 与各插件日志
 #   SHOW_JVM_WARN=1 不过滤测试子进程里的 OpenJDK/ByteBuddy 常见警告
-#   JAVA_HOME、MAVEN_OPTS（脚本会为 mockito-inline 追加 -XX:+EnableDynamicAgentLoading）
+#   JAVA_HOME、MAVEN_OPTS（JDK 9+ 时脚本会为 mockito-inline 追加 -XX:+EnableDynamicAgentLoading）
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-if [[ ! "${MAVEN_OPTS:-}" =~ EnableDynamicAgentLoading ]]; then
+JAVA_VERSION_LINE="$(java -version 2>&1 | head -n 1 || true)"
+JAVA_MAJOR=0
+if [[ "$JAVA_VERSION_LINE" =~ \"1\.([0-9]+) ]]; then
+  JAVA_MAJOR="${BASH_REMATCH[1]}"
+elif [[ "$JAVA_VERSION_LINE" =~ \"([0-9]+) ]]; then
+  JAVA_MAJOR="${BASH_REMATCH[1]}"
+fi
+
+if [[ "$JAVA_MAJOR" -ge 9 && ! "${MAVEN_OPTS:-}" =~ EnableDynamicAgentLoading ]]; then
   export MAVEN_OPTS="${MAVEN_OPTS:+$MAVEN_OPTS }-XX:+EnableDynamicAgentLoading"
 fi
 
@@ -48,11 +56,13 @@ summarize_surefire_reports() {
   local root=$1
   shift
   local user_args="$*"
-  local tmp agg
+  local tmp agg files
   tmp=$(mktemp "${TMPDIR:-/tmp}/run-tests-sum.XXXXXX") || return 0
   agg="${tmp}.agg"
+  files="${tmp}.files"
 
   local f d mod t fe e sk
+  find "$root" -path '*/target/surefire-reports/TEST-*.xml' -print0 2>/dev/null | sort -z > "$files" || true
   while IFS= read -r -d '' f; do
     [[ -f "$f" ]] || continue
     d=$(dirname "$f")
@@ -64,7 +74,7 @@ summarize_surefire_reports() {
     e=$(grep -m1 -oE 'errors="[0-9]+"' "$f" | grep -oE '[0-9]+' || echo 0)
     sk=$(grep -m1 -oE 'skipped="[0-9]+"' "$f" | grep -oE '[0-9]+' || echo 0)
     echo "$mod $t $fe $e $sk" >> "$tmp"
-  done < <(find "$root" -path '*/target/surefire-reports/TEST-*.xml' -print0 2>/dev/null | sort -z)
+  done < "$files"
 
   echo ""
   echo "┌─────────────────────────────────────────────────────────────┐"
@@ -95,7 +105,7 @@ summarize_surefire_reports() {
     printf "│  %-14s %6s %6s %6s %6s                          │\n" "合计" "$sum_tests" "$sum_fail" "$sum_err" "$sum_skip"
     echo "│  ※ 若只构建了部分模块，表中可能仍含其它模块「历史 target」数据 │"
   fi
-  rm -f "$tmp" "$agg"
+  rm -f "$tmp" "$agg" "$files"
   echo "└─────────────────────────────────────────────────────────────┘"
   echo ""
   echo "  详测 stdout/stderr：各模块 target/surefire-reports/*-output.txt"
@@ -122,12 +132,22 @@ echo "执行：mvn ${MVN_CLI[*]} test $*"
 echo ""
 
 set +e
+stderr_file=""
 if [[ "${SHOW_JVM_WARN:-0}" == "1" ]]; then
   mvn "${MVN_CLI[@]}" test "$@"
+  code=$?
 else
-  mvn "${MVN_CLI[@]}" test "$@" 2> >(filter_jvm_stderr)
+  stderr_file=$(mktemp "${TMPDIR:-/tmp}/run-tests-stderr.XXXXXX") || stderr_file=""
+  if [[ -n "$stderr_file" ]]; then
+    mvn "${MVN_CLI[@]}" test "$@" 2> "$stderr_file"
+    code=$?
+    filter_jvm_stderr < "$stderr_file"
+    rm -f "$stderr_file"
+  else
+    mvn "${MVN_CLI[@]}" test "$@"
+    code=$?
+  fi
 fi
-code=$?
 set -e
 
 summarize_surefire_reports "$ROOT" "$@"
