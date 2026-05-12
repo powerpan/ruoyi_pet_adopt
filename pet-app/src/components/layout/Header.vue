@@ -8,15 +8,15 @@
       </span>
     </div>
     <nav class="nav">
-      <router-link to="/"><i class="el-icon-s-home"></i>首页</router-link>
-      <router-link to="/adoptions"><i class="el-icon-guide"></i>领养</router-link>
-      <router-link to="/topics"><i class="el-icon-collection-tag"></i>话题</router-link>
-      <router-link to="/publish"><i class="el-icon-edit-outline"></i>发布</router-link>
-      <router-link v-if="token" to="/favorites"><i class="el-icon-star-off"></i>收藏</router-link>
-      <router-link v-if="token" to="/pets"><i class="el-icon-document"></i>宠物</router-link>
-      <router-link to="/services"><i class="el-icon-location-outline"></i>服务</router-link>
+      <router-link to="/" data-tone="P"><i class="el-icon-s-home"></i>首页</router-link>
+      <router-link to="/adoptions" data-tone="O"><i class="el-icon-guide"></i>领养</router-link>
+      <router-link to="/topics" data-tone="W"><i class="el-icon-collection-tag"></i>话题</router-link>
+      <router-link to="/publish" data-tone="E"><i class="el-icon-edit-outline"></i>发布</router-link>
+      <router-link v-if="token" to="/favorites" data-tone="R"><i class="el-icon-star-off"></i>收藏</router-link>
+      <router-link v-if="token" to="/pets" data-tone="P"><i class="el-icon-document"></i>宠物</router-link>
+      <router-link to="/services" data-tone="A"><i class="el-icon-location-outline"></i>服务</router-link>
       <router-link v-if="hasMerchant" to="/merchant"><i class="el-icon-office-building"></i>商家</router-link>
-      <router-link to="/health"><i class="el-icon-first-aid-kit"></i>健康</router-link>
+      <router-link to="/health" data-tone="N"><i class="el-icon-first-aid-kit"></i>健康</router-link>
       <router-link to="/me"><i class="el-icon-user"></i>我的</router-link>
     </nav>
     <div class="actions">
@@ -180,6 +180,7 @@ export default {
   display: none;
 }
 .nav a {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -190,7 +191,21 @@ export default {
   text-decoration: none;
   font-size: 14px;
   white-space: nowrap;
+  overflow: hidden;
   transition: background .18s ease, color .18s ease;
+}
+.nav a[data-tone]::before {
+  content: attr(data-tone);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  color: rgba(18, 86, 78, .24);
+  font-size: 46px;
+  font-weight: 300;
+  line-height: .8;
+  pointer-events: none;
+  user-select: none;
 }
 .nav a.router-link-exact-active {
   color: var(--pet-primary);
