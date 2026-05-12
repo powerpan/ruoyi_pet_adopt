@@ -1,0 +1,69 @@
+# 项目相关配置
+ruoyi:
+  name: RuoYi Pet Adopt
+  version: 3.8.7
+  copyrightYear: 2026
+  addressEnabled: false
+  captchaType: math
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    uri-encoding: UTF-8
+    accept-count: 1000
+    threads:
+      max: 800
+      min-spare: 100
+
+logging:
+  level:
+    com.ruoyi: debug
+    org.springframework: warn
+
+user:
+  password:
+    maxRetryCount: 5
+    lockTime: 10
+
+spring:
+  messages:
+    basename: i18n/messages
+  profiles:
+    active: dev
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
+  devtools:
+    restart:
+      enabled: true
+
+token:
+  header: Authorization
+  secret: ${RUOYI_PET_ADOPT_TOKEN_SECRET:ruoyi-pet-adopt-local-dev-token-secret}
+  expireTime: 30
+
+mybatis-plus:
+  typeAliasesPackage: com.ruoyi.**.domain
+  mapperLocations: classpath*:mapper/**/*Mapper.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: assign_id
+      update-strategy: not_empty
+      logic-delete-field: del_flag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+pagehelper:
+  helperDialect: mysql
+  supportMethodsArguments: true
+  params: count=countSql
+
+xss:
+  enabled: true
+  excludes: /system/notice
+  urlPatterns: /system/*,/monitor/*,/tool/*,/manager/pet/*

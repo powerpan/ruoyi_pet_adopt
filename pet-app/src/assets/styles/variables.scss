@@ -1,0 +1,58 @@
+/* ==========================================================================
+   Design Tokens (设计令牌)
+   ========================================================================== */
+
+/* 1. 主色调 & 功能色 */
+$--color-primary: #1677FF; // 现代科技蓝
+$--color-success: #52C41A;
+$--color-warning: #FAAD14;
+$--color-danger:  #FF4D4F;
+$--color-info:    #909399;
+
+/* 2. 中性色 (文字 & 边框 & 背景) */
+$--color-text-primary: #141414; // 主标题
+$--color-text-regular: #595959; // 正文
+$--color-text-secondary:#8C8C8C; // 辅助信息
+$--color-text-placeholder:#BFBFBF;
+
+$--border-color-base:  #D9D9D9; // 默认边框
+$--border-color-light: #F0F0F0; // 浅边框/分割线
+
+$--bg-color-base:      #F5F7FA; // 页面底层背景
+$--bg-color-overlay:   #FFFFFF; // 卡片/弹窗背景
+$--bg-color-light:     #FAFAFA; // 斑马纹/表头背景
+
+/* 3. 尺寸与空间 (Whitespace) */
+$--spacing-base: 16px;
+$--spacing-lg:   24px;
+$--spacing-xl:   32px;
+$--spacing-xxl:  80px;  // 页面级大区块间距
+
+/* 4. 阴影 (Shadows) */
+$--box-shadow-base: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+$--box-shadow-hover: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+
+/* 5. 圆角 (Border Radius) */
+$--border-radius-base: 6px;
+$--border-radius-large: 8px;
+
+/* 6. 动效 (Transitions) */
+$--transition-all: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+
+/* CSS 变量导出，以便在内联样式或原生 css 中使用 */
+:root {
+  --color-primary: #{$--color-primary};
+  --color-text-primary: #{$--color-text-primary};
+  --color-text-regular: #{$--color-text-regular};
+  --color-text-secondary: #{$--color-text-secondary};
+  --border-color-base: #{$--border-color-base};
+  --border-color-light: #{$--border-color-light};
+  --bg-color-base: #{$--bg-color-base};
+  --bg-color-overlay: #{$--bg-color-overlay};
+  --box-shadow-base: #{$--box-shadow-base};
+  --box-shadow-hover: #{$--box-shadow-hover};
+  --border-radius-base: #{$--border-radius-base};
+  --border-radius-large: #{$--border-radius-large};
+  --transition-all: #{$--transition-all};
+  --spacing-xxl: #{$--spacing-xxl};
+}

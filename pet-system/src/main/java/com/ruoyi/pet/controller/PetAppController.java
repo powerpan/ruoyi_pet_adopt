@@ -1,0 +1,1530 @@
+/*
+ * Copyright: https://github.com/powerpan/ruoyi_pet_adopt.git
+ */
+package com.ruoyi.pet.controller;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.ruoyi.common.annotation.Anonymous;
+import com.ruoyi.common.core.controller.BaseController;
+import com.ruoyi.common.core.domain.R;
+import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.utils.SecurityUtils;
+import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.pet.domain.*;
+import com.ruoyi.pet.mapper.*;
+import com.ruoyi.pet.service.PetNotificationService;
+
+@RestController
+@RequestMapping("/app/pet")
+public class PetAppController extends BaseController {
+    @Autowired private PetUserProfileMapper userProfileMapper;
+    @Autowired private PetProfileMapper petProfileMapper;
+    @Autowired private PetPostMapper postMapper;
+    @Autowired private PetPostMediaMapper postMediaMapper;
+    @Autowired private PetTopicMapper topicMapper;
+    @Autowired private PetPostTopicMapper postTopicMapper;
+    @Autowired private PetCommentMapper commentMapper;
+    @Autowired private PetInteractionMapper interactionMapper;
+    @Autowired private PetMerchantMapper merchantMapper;
+    @Autowired private PetMerchantQualificationMapper qualificationMapper;
+    @Autowired private PetServiceItemMapper serviceItemMapper;
+    @Autowired private PetServiceRequestMapper serviceRequestMapper;
+    @Autowired private PetServiceMessageMapper serviceMessageMapper;
+    @Autowired private PetServiceReviewMapper serviceReviewMapper;
+    @Autowired private PetHealthRecordMapper healthRecordMapper;
+    @Autowired private PetReminderMapper reminderMapper;
+    @Autowired private PetNotificationMapper notificationMapper;
+    @Autowired private PetBoardingRelationMapper boardingRelationMapper;
+    // 客户端通知管线入口，项目版权地址：https://github.com/powerpan/ruoyi_pet_adopt.git
+    @Autowired private PetNotificationService notificationService;
+
+    @GetMapping("/profile")
+    public R<PetUserProfile> profile() {
+        Long userId = SecurityUtils.getUserId();
+        PetUserProfile profile = userProfileMapper.selectOne(new QueryWrapper<PetUserProfile>().eq("user_id", userId));
+        if (profile == null) {
+            profile = new PetUserProfile();
+            profile.setUserId(userId);
+            profile.setNickname(SecurityUtils.getUsername());
+            profile.setBloggerStatus(0);
+            profile.setFollowerCount(0);
+            profile.setFollowingCount(0);
+            profile.setPostCount(0);
+            profile.setCreateBy(SecurityUtils.getUsername());
+            profile.setCreateTime(new Date());
+            userProfileMapper.insert(profile);
+        }
+        return R.ok(profile);
+    }
+
+    @PutMapping("/profile")
+    public R<Integer> updateProfile(@RequestBody PetUserProfile profile) {
+        Long userId = SecurityUtils.getUserId();
+        PetUserProfile exists = userProfileMapper.selectOne(new QueryWrapper<PetUserProfile>().eq("user_id", userId));
+        PetUserProfile update = new PetUserProfile();
+        update.setUserId(userId);
+        update.setNickname(profile.getNickname());
+        update.setAvatar(profile.getAvatar());
+        update.setBio(profile.getBio());
+        update.setHomepageCover(profile.getHomepageCover());
+        update.setUpdateBy(SecurityUtils.getUsername());
+        update.setUpdateTime(new Date());
+        if (exists == null) {
+            update.setBloggerStatus(0);
+            update.setFollowerCount(0);
+            update.setFollowingCount(0);
+            update.setPostCount(0);
+            update.setCreateBy(SecurityUtils.getUsername());
+            update.setCreateTime(new Date());
+            return R.ok(userProfileMapper.insert(update));
+        }
+        update.setId(exists.getId());
+        return R.ok(userProfileMapper.updateById(update));
+    }
+
+    @GetMapping("/notifications")
+    public TableDataInfo notifications(@RequestParam(required = false) Integer status,
+                                       @RequestParam(required = false) String noticeType) {
+        Long userId = SecurityUtils.getUserId();
+        notificationService.syncDueReminderNotifications(userId);
+        startPage();
+        return getDataTable(notificationMapper.selectUserNotifications(userId, status, noticeType));
+    }
+
+    @GetMapping("/notifications/unread-count")
+    public R<Long> unreadNotificationCount() {
+        return R.ok(notificationService.countUnread(SecurityUtils.getUserId()));
+    }
+
+    @PutMapping("/notifications/{id:[0-9]+}/read")
+    public R<Integer> readNotification(@PathVariable Long id) {
+        return R.ok(notificationMapper.update(null, new UpdateWrapper<PetNotification>()
+                .eq("id", id)
+                .eq("receiver_user_id", SecurityUtils.getUserId())
+                .set("status", 1)
+                .set("read_time", new Date())
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", new Date())));
+    }
+
+    @PutMapping("/notifications/read-all")
+    public R<Integer> readAllNotifications() {
+        return R.ok(notificationMapper.update(null, new UpdateWrapper<PetNotification>()
+                .eq("receiver_user_id", SecurityUtils.getUserId())
+                .eq("status", 0)
+                .set("status", 1)
+                .set("read_time", new Date())
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", new Date())));
+    }
+
+    @DeleteMapping("/notifications/{ids:[0-9,]+}")
+    public R<Integer> deleteNotifications(@PathVariable Long[] ids) {
+        return R.ok(notificationMapper.delete(new QueryWrapper<PetNotification>()
+                .in("id", Arrays.asList(ids))
+                .eq("receiver_user_id", SecurityUtils.getUserId())));
+    }
+
+    @PostMapping("/profile/blogger-apply")
+    public R<Integer> applyBlogger() {
+        Long userId = SecurityUtils.getUserId();
+        PetUserProfile profile = userProfileMapper.selectOne(new QueryWrapper<PetUserProfile>().eq("user_id", userId));
+        if (profile == null) {
+            profile();
+            profile = userProfileMapper.selectOne(new QueryWrapper<PetUserProfile>().eq("user_id", userId));
+        }
+        profile.setBloggerStatus(2);
+        profile.setUpdateBy(SecurityUtils.getUsername());
+        profile.setUpdateTime(new Date());
+        return R.ok(userProfileMapper.updateById(profile));
+    }
+
+    @GetMapping("/pets")
+    public TableDataInfo pets(PetProfile query) {
+        startPage();
+        QueryWrapper<PetProfile> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_id", SecurityUtils.getUserId()).orderByDesc("create_time");
+        List<PetProfile> pets = petProfileMapper.selectList(wrapper);
+        decorateBoardingPets(pets, SecurityUtils.getUserId());
+        return getDataTable(pets);
+    }
+
+    @PostMapping("/pets")
+    public R<Integer> addPet(@RequestBody PetProfile pet) {
+        pet.setUserId(SecurityUtils.getUserId());
+        pet.setStatus(defaultInt(pet.getStatus(), 0));
+        pet.setCreateBy(SecurityUtils.getUsername());
+        pet.setCreateTime(new Date());
+        return R.ok(petProfileMapper.insert(pet));
+    }
+
+    @PutMapping("/pets")
+    public R<Integer> updatePet(@RequestBody PetProfile pet) {
+        pet.setUserId(SecurityUtils.getUserId());
+        pet.setUpdateBy(SecurityUtils.getUsername());
+        pet.setUpdateTime(new Date());
+        return R.ok(petProfileMapper.update(pet, new UpdateWrapper<PetProfile>().eq("id", pet.getId()).eq("user_id", pet.getUserId())));
+    }
+
+    @Anonymous
+    @GetMapping("/topics")
+    public TableDataInfo topics(PetTopic topic) {
+        startPage();
+        QueryWrapper<PetTopic> wrapper = new QueryWrapper<>();
+        if (StringUtils.isNotEmpty(topic.getName())) {
+            wrapper.like("name", topic.getName());
+        }
+        wrapper.eq("status", 0).orderByDesc("post_count").orderByDesc("create_time");
+        return getDataTable(topicMapper.selectList(wrapper));
+    }
+
+    @Anonymous
+    @GetMapping("/posts")
+    public TableDataInfo posts(@RequestParam(required = false) Long topicId,
+                               @RequestParam(required = false) String keyword) {
+        startPage();
+        QueryWrapper<PetPost> wrapper = new QueryWrapper<>();
+        wrapper.eq("audit_status", 1).eq("status", 0);
+        if (StringUtils.isNotEmpty(keyword)) {
+            wrapper.and(w -> w.like("title", keyword).or().like("content", keyword));
+        }
+        if (topicId != null) {
+            List<Object> postIds = postTopicMapper.selectObjs(new QueryWrapper<PetPostTopic>()
+                    .select("post_id").eq("topic_id", topicId));
+            if (postIds.isEmpty()) {
+                wrapper.eq("id", -1);
+            } else {
+                wrapper.in("id", postIds);
+            }
+        }
+        wrapper.orderByDesc("create_time");
+        return getDataTable(postMapper.selectList(wrapper));
+    }
+
+    @Anonymous
+    @GetMapping("/posts/{id:[0-9]+}")
+    public R<PetPost> postDetail(@PathVariable Long id) {
+        PetPost post = publicPost(id);
+        if (post == null) {
+            return R.fail("动态不存在或暂未公开");
+        }
+        postMapper.update(null, new UpdateWrapper<PetPost>()
+                .eq("id", id).eq("audit_status", 1).eq("status", 0)
+                .setSql("view_count = ifnull(view_count, 0) + 1"));
+        post = publicPost(id);
+        if (post != null) {
+            hydratePost(post);
+            Long userId = currentUserIdOrNull();
+            if (userId != null) {
+                post.setLiked(hasInteraction(userId, id, "like"));
+                post.setFavorited(hasInteraction(userId, id, "favorite"));
+            }
+        }
+        return R.ok(post);
+    }
+
+    @GetMapping("/posts/mine")
+    public TableDataInfo myPosts(@RequestParam(required = false) Integer auditStatus) {
+        startPage();
+        QueryWrapper<PetPost> wrapper = new QueryWrapper<PetPost>()
+                .eq("author_id", SecurityUtils.getUserId());
+        if (auditStatus != null) {
+            wrapper.eq("audit_status", auditStatus);
+        }
+        wrapper.orderByDesc("create_time");
+        List<PetPost> posts = postMapper.selectList(wrapper);
+        posts.forEach(this::hydratePost);
+        return getDataTable(posts);
+    }
+
+    @GetMapping("/posts/favorites")
+    public TableDataInfo favoritePosts(@RequestParam(required = false) String keyword) {
+        Long userId = SecurityUtils.getUserId();
+        startPage();
+        List<PetPost> posts = postMapper.selectFavoritePosts(userId, keyword);
+        posts.forEach(post -> {
+            hydratePost(post);
+            post.setFavorited(true);
+            post.setLiked(hasInteraction(userId, post.getId(), "like"));
+        });
+        return getDataTable(posts);
+    }
+
+    @PostMapping("/posts")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Long> addPost(@RequestBody PetPost post) {
+        post.setAuthorId(SecurityUtils.getUserId());
+        post.setAuditStatus(0);
+        post.setStatus(0);
+        post.setLikeCount(0);
+        post.setCommentCount(0);
+        post.setFavoriteCount(0);
+        post.setViewCount(0);
+        post.setCreateBy(SecurityUtils.getUsername());
+        post.setCreateTime(new Date());
+        postMapper.insert(post);
+        savePostMedia(post);
+        savePostTopics(post);
+        recalcProfilePostCount(SecurityUtils.getUserId());
+        return R.ok(post.getId());
+    }
+
+    @PutMapping("/posts")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Integer> updatePost(@RequestBody PetPost post) {
+        Long userId = SecurityUtils.getUserId();
+        PetPost exists = postMapper.selectOne(new QueryWrapper<PetPost>()
+                .eq("id", post.getId()).eq("author_id", userId));
+        if (exists == null) {
+            return R.fail("帖子不存在或无权编辑");
+        }
+        if (exists.getAuditStatus() != null && exists.getAuditStatus() == 1) {
+            return R.fail("已通过审核的帖子暂不支持编辑");
+        }
+        Set<Long> affectedTopicIds = new HashSet<>();
+        postTopicMapper.selectObjs(new QueryWrapper<PetPostTopic>().select("topic_id").eq("post_id", post.getId()))
+                .forEach(item -> affectedTopicIds.add(Long.valueOf(String.valueOf(item))));
+        if (!CollectionUtils.isEmpty(post.getTopicIds())) {
+            affectedTopicIds.addAll(post.getTopicIds());
+        }
+        post.setAuthorId(userId);
+        post.setAuditStatus(0);
+        post.setStatus(defaultInt(post.getStatus(), 0));
+        post.setUpdateBy(SecurityUtils.getUsername());
+        post.setUpdateTime(new Date());
+        int rows = postMapper.update(post, new UpdateWrapper<PetPost>()
+                .eq("id", post.getId()).eq("author_id", userId).ne("audit_status", 1));
+        postMediaMapper.delete(new QueryWrapper<PetPostMedia>().eq("post_id", post.getId()));
+        postTopicMapper.delete(new QueryWrapper<PetPostTopic>().eq("post_id", post.getId()));
+        savePostMedia(post);
+        savePostTopics(post);
+        recalcTopicCounts(affectedTopicIds);
+        return R.ok(rows);
+    }
+
+    @DeleteMapping("/posts/{ids:[0-9,]+}")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Integer> deletePosts(@PathVariable Long[] ids) {
+        List<PetPost> posts = postMapper.selectList(new QueryWrapper<PetPost>()
+                .in("id", Arrays.asList(ids)).eq("author_id", SecurityUtils.getUserId()));
+        return R.ok(deletePostCascade(posts));
+    }
+
+    @Anonymous
+    @GetMapping("/posts/{postId:[0-9]+}/comments")
+    public TableDataInfo comments(@PathVariable Long postId) {
+        if (publicPost(postId) == null) {
+            return getDataTable(java.util.Collections.emptyList());
+        }
+        startPage();
+        return getDataTable(commentMapper.selectVisibleByPost(postId));
+    }
+
+    @PostMapping("/posts/{postId:[0-9]+}/comments")
+    public R<Integer> addComment(@PathVariable Long postId, @RequestBody PetComment comment) {
+        if (publicPost(postId) == null) {
+            return R.fail("动态不存在或暂未公开");
+        }
+        comment.setPostId(postId);
+        comment.setUserId(SecurityUtils.getUserId());
+        comment.setAuditStatus(0);
+        comment.setStatus(0);
+        comment.setLikeCount(0);
+        comment.setCreateBy(SecurityUtils.getUsername());
+        comment.setCreateTime(new Date());
+        int rows = commentMapper.insert(comment);
+        return R.ok(rows);
+    }
+
+    @PostMapping("/posts/{postId:[0-9]+}/interactions")
+    public R<Map<String, Object>> interact(@PathVariable Long postId, @RequestParam String type) {
+        if (!"like".equals(type) && !"favorite".equals(type)) {
+            return R.fail("不支持的互动类型");
+        }
+        if (publicPost(postId) == null) {
+            return R.fail("动态不存在或暂未公开");
+        }
+        Long userId = SecurityUtils.getUserId();
+        QueryWrapper<PetInteraction> exists = new QueryWrapper<PetInteraction>()
+                .eq("user_id", userId).eq("target_type", "post").eq("target_id", postId).eq("interaction_type", type);
+        Map<String, Object> data = new HashMap<>();
+        PetInteraction old = interactionMapper.selectOne(exists);
+        if (old != null) {
+            interactionMapper.deleteById(old.getId());
+            if ("like".equals(type)) {
+                postMapper.update(null, new UpdateWrapper<PetPost>().eq("id", postId).setSql("like_count = greatest(ifnull(like_count, 0) - 1, 0)"));
+            } else {
+                postMapper.update(null, new UpdateWrapper<PetPost>().eq("id", postId).setSql("favorite_count = greatest(ifnull(favorite_count, 0) - 1, 0)"));
+            }
+            data.put("active", false);
+            return R.ok(data, "已取消");
+        }
+        PetInteraction interaction = new PetInteraction();
+        interaction.setUserId(userId);
+        interaction.setTargetType("post");
+        interaction.setTargetId(postId);
+        interaction.setInteractionType(type);
+        interaction.setCreateTime(new Date());
+        int rows = interactionMapper.insert(interaction);
+        if ("like".equals(type)) {
+            postMapper.update(null, new UpdateWrapper<PetPost>().eq("id", postId).setSql("like_count = ifnull(like_count, 0) + 1"));
+        } else if ("favorite".equals(type)) {
+            postMapper.update(null, new UpdateWrapper<PetPost>().eq("id", postId).setSql("favorite_count = ifnull(favorite_count, 0) + 1"));
+        }
+        data.put("active", true);
+        data.put("rows", rows);
+        return R.ok(data);
+    }
+
+    @PostMapping("/merchants")
+    public R<Long> addMerchant(@RequestBody PetMerchant merchant) {
+        if (currentMerchantForUser(SecurityUtils.getUserId()) != null) {
+            return R.fail("一个账号仅能绑定一个商家，请在商家工作台维护当前商家资料");
+        }
+        if (merchant == null || StringUtils.isEmpty(merchant.getName()) || StringUtils.isEmpty(merchant.getPhone())) {
+            return R.fail("请填写商家名称和联系电话");
+        }
+        merchant.setUserId(SecurityUtils.getUserId());
+        merchant.setQualificationStatus(0);
+        merchant.setStatus(1);
+        merchant.setScore(new BigDecimal("0.00"));
+        merchant.setReviewCount(0);
+        merchant.setCreateBy(SecurityUtils.getUsername());
+        merchant.setCreateTime(new Date());
+        merchantMapper.insert(merchant);
+        return R.ok(merchant.getId());
+    }
+
+    @PutMapping("/merchants")
+    public R<Integer> updateMerchant(@RequestBody PetMerchant merchant) {
+        if (merchant == null || merchant.getId() == null) {
+            return R.fail("商家不存在");
+        }
+        PetMerchant exists = ownedMerchant(merchant.getId());
+        if (exists == null) {
+            return R.fail("商家不存在或无权编辑");
+        }
+        if (StringUtils.isEmpty(merchant.getName()) || StringUtils.isEmpty(merchant.getPhone())) {
+            return R.fail("请填写商家名称和联系电话");
+        }
+        PetMerchant update = new PetMerchant();
+        update.setId(exists.getId());
+        update.setUserId(SecurityUtils.getUserId());
+        update.setName(merchant.getName());
+        update.setContactName(merchant.getContactName());
+        update.setPhone(merchant.getPhone());
+        update.setCity(merchant.getCity());
+        update.setDistrict(merchant.getDistrict());
+        update.setAddress(merchant.getAddress());
+        update.setLongitude(merchant.getLongitude());
+        update.setLatitude(merchant.getLatitude());
+        update.setDescription(merchant.getDescription());
+        update.setLogoUrl(merchant.getLogoUrl());
+        update.setScore(exists.getScore());
+        update.setReviewCount(exists.getReviewCount());
+        if (exists.getQualificationStatus() != null && exists.getQualificationStatus() == 1) {
+            update.setQualificationStatus(exists.getQualificationStatus());
+            update.setStatus(exists.getStatus());
+        } else {
+            update.setQualificationStatus(0);
+            update.setStatus(1);
+        }
+        update.setUpdateBy(SecurityUtils.getUsername());
+        update.setUpdateTime(new Date());
+        return R.ok(merchantMapper.update(update, new UpdateWrapper<PetMerchant>()
+                .eq("id", exists.getId()).eq("user_id", SecurityUtils.getUserId())));
+    }
+
+    @PostMapping("/merchants/{merchantId:[0-9]+}/qualifications")
+    public R<Integer> addQualification(@PathVariable Long merchantId, @RequestBody PetMerchantQualification qualification) {
+        if (ownedMerchant(merchantId) == null) {
+            return R.fail("商家不存在或无权提交资质");
+        }
+        qualification.setMerchantId(merchantId);
+        qualification.setAuditStatus(0);
+        qualification.setCreateBy(SecurityUtils.getUsername());
+        qualification.setCreateTime(new Date());
+        return R.ok(qualificationMapper.insert(qualification));
+    }
+
+    @GetMapping("/merchants/mine")
+    public TableDataInfo myMerchants() {
+        startPage();
+        return getDataTable(merchantMapper.selectList(new QueryWrapper<PetMerchant>()
+                .eq("user_id", SecurityUtils.getUserId()).orderByDesc("create_time")));
+    }
+
+    @GetMapping("/merchants/{merchantId:[0-9]+}/qualifications")
+    public TableDataInfo merchantQualifications(@PathVariable Long merchantId) {
+        PetMerchant merchant = merchantMapper.selectOne(new QueryWrapper<PetMerchant>()
+                .eq("id", merchantId).eq("user_id", SecurityUtils.getUserId()));
+        if (merchant == null) {
+            return getDataTable(java.util.Collections.emptyList());
+        }
+        startPage();
+        return getDataTable(qualificationMapper.selectList(new QueryWrapper<PetMerchantQualification>()
+                .eq("merchant_id", merchantId).orderByDesc("create_time")));
+    }
+
+    @Anonymous
+    @GetMapping("/merchants")
+    public TableDataInfo merchants(PetMerchant merchant) {
+        startPage();
+        QueryWrapper<PetMerchant> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", 0).eq("qualification_status", 1);
+        if (StringUtils.isNotEmpty(merchant.getName())) {
+            wrapper.like("name", merchant.getName());
+        }
+        if (StringUtils.isNotEmpty(merchant.getCity())) {
+            wrapper.eq("city", merchant.getCity());
+        }
+        wrapper.orderByDesc("score").orderByDesc("create_time");
+        return getDataTable(merchantMapper.selectList(wrapper));
+    }
+
+    @Anonymous
+    @GetMapping("/services")
+    public TableDataInfo services(@RequestParam(required = false) BigDecimal latitude,
+                                  @RequestParam(required = false) BigDecimal longitude,
+                                  @RequestParam(defaultValue = "5") BigDecimal radiusKm,
+                                  @RequestParam(required = false) String serviceType,
+                                  @RequestParam(required = false) String keyword) {
+        startPage();
+        if (latitude != null && longitude != null) {
+            return getDataTable(serviceItemMapper.selectNearby(latitude, longitude, radiusKm, serviceType, keyword));
+        }
+        return getDataTable(serviceItemMapper.selectVisible(serviceType, keyword));
+    }
+
+    @GetMapping("/merchants/{merchantId:[0-9]+}/services")
+    public TableDataInfo myMerchantServices(@PathVariable Long merchantId,
+                                            @RequestParam(required = false) Integer status) {
+        PetMerchant merchant = ownedMerchant(merchantId);
+        if (merchant == null) {
+            return getDataTable(java.util.Collections.emptyList());
+        }
+        startPage();
+        QueryWrapper<PetServiceItem> wrapper = new QueryWrapper<PetServiceItem>().eq("merchant_id", merchantId);
+        if (status != null) {
+            wrapper.eq("status", status);
+        }
+        wrapper.orderByDesc("create_time");
+        return getDataTable(serviceItemMapper.selectList(wrapper));
+    }
+
+    @PostMapping("/merchants/{merchantId:[0-9]+}/services")
+    public R<Long> addMerchantService(@PathVariable Long merchantId, @RequestBody PetServiceItem service) {
+        PetMerchant merchant = ownedApprovedMerchant(merchantId);
+        if (merchant == null) {
+            return R.fail("商家审核通过后才能发布服务");
+        }
+        service.setMerchantId(merchant.getId());
+        service.setStatus(defaultInt(service.getStatus(), 0));
+        service.setReviewScore(new BigDecimal("0.00"));
+        service.setReviewCount(0);
+        service.setCreateBy(SecurityUtils.getUsername());
+        service.setCreateTime(new Date());
+        serviceItemMapper.insert(service);
+        return R.ok(service.getId());
+    }
+
+    @PutMapping("/merchant-services")
+    public R<Integer> updateMerchantService(@RequestBody PetServiceItem service) {
+        if (service.getId() == null) {
+            return R.fail("服务不存在");
+        }
+        PetServiceItem exists = serviceItemMapper.selectById(service.getId());
+        if (exists == null || ownedMerchant(exists.getMerchantId()) == null) {
+            return R.fail("服务不存在或无权编辑");
+        }
+        if (ownedApprovedMerchant(exists.getMerchantId()) == null) {
+            return R.fail("商家审核通过后才能维护服务");
+        }
+        service.setMerchantId(exists.getMerchantId());
+        service.setReviewScore(exists.getReviewScore());
+        service.setReviewCount(exists.getReviewCount());
+        service.setUpdateBy(SecurityUtils.getUsername());
+        service.setUpdateTime(new Date());
+        return R.ok(serviceItemMapper.updateById(service));
+    }
+
+    @DeleteMapping("/merchant-services/{ids:[0-9,]+}")
+    public R<Integer> deleteMerchantServices(@PathVariable Long[] ids) {
+        List<Long> merchantIds = merchantMapper.selectObjs(new QueryWrapper<PetMerchant>()
+                .select("id").eq("user_id", SecurityUtils.getUserId()))
+                .stream().map(item -> Long.valueOf(String.valueOf(item))).collect(java.util.stream.Collectors.toList());
+        if (merchantIds.isEmpty()) {
+            return R.ok(0);
+        }
+        long requestCount = serviceRequestMapper.selectCount(new QueryWrapper<PetServiceRequest>()
+                .in("service_id", Arrays.asList(ids)).in("merchant_id", merchantIds));
+        long reviewCount = serviceReviewMapper.selectCount(new QueryWrapper<PetServiceReview>()
+                .in("service_id", Arrays.asList(ids)).in("merchant_id", merchantIds));
+        if (requestCount > 0 || reviewCount > 0) {
+            return R.fail("服务已有预约或评价记录，请改为下架以保留订单历史");
+        }
+        return R.ok(serviceItemMapper.delete(new QueryWrapper<PetServiceItem>()
+                .in("id", Arrays.asList(ids)).in("merchant_id", merchantIds)));
+    }
+
+    @PostMapping("/service-requests")
+    public R<Long> addServiceRequest(@RequestBody PetServiceRequest request) {
+        PetServiceItem service = visibleService(request.getServiceId());
+        if (service == null) {
+            return R.fail("服务已下架或商家未通过审核");
+        }
+        request.setUserId(SecurityUtils.getUserId());
+        request.setMerchantId(service.getMerchantId());
+        request.setStatus(0);
+        request.setCreateBy(SecurityUtils.getUsername());
+        request.setCreateTime(new Date());
+        serviceRequestMapper.insert(request);
+        PetMerchant merchant = merchantMapper.selectById(service.getMerchantId());
+        if (merchant != null) {
+            notificationService.create(merchant.getUserId(), SecurityUtils.getUserId(), "service_request", "service_request",
+                    request.getId(), "收到新的预约咨询",
+                    service.getServiceName() + " 有新的预约，请在商家工作台处理。", "/merchant");
+        }
+        return R.ok(request.getId());
+    }
+
+    @GetMapping("/service-requests/mine")
+    public TableDataInfo myServiceRequests(@RequestParam(required = false) Integer status) {
+        startPage();
+        return getDataTable(serviceRequestMapper.selectUserRequests(SecurityUtils.getUserId(), status));
+    }
+
+    @GetMapping("/service-requests/{requestId:[0-9]+}/messages")
+    public R<List<PetServiceMessage>> serviceRequestMessages(@PathVariable Long requestId) {
+        PetServiceRequest request = authorizedServiceRequest(requestId);
+        if (request == null) {
+            return R.fail("订单不存在或无权查看");
+        }
+        return R.ok(serviceMessageMapper.selectByRequestId(requestId));
+    }
+
+    @PostMapping("/service-requests/{requestId:[0-9]+}/messages")
+    public R<Integer> addServiceRequestMessage(@PathVariable Long requestId, @RequestBody PetServiceMessage message) {
+        PetServiceRequest request = authorizedServiceRequest(requestId);
+        if (request == null) {
+            return R.fail("订单不存在或无权发送消息");
+        }
+        if (message == null || StringUtils.isEmpty(message.getContent())) {
+            return R.fail("消息内容不能为空");
+        }
+        String actorRole = serviceRequestActorRole(request);
+        if (actorRole == null) {
+            return R.fail("订单不存在或无权发送消息");
+        }
+        PetServiceMessage insert = new PetServiceMessage();
+        insert.setRequestId(requestId);
+        insert.setSenderUserId(SecurityUtils.getUserId());
+        insert.setSenderRole(actorRole);
+        insert.setContent(message.getContent());
+        insert.setCreateBy(SecurityUtils.getUsername());
+        insert.setCreateTime(new Date());
+        int rows = serviceMessageMapper.insert(insert);
+        notifyServiceMessage(request, actorRole, message.getContent());
+        return R.ok(rows);
+    }
+
+    @GetMapping("/merchant-service-requests")
+    public TableDataInfo myMerchantServiceRequests(@RequestParam(required = false) Long merchantId,
+                                                   @RequestParam(required = false) Integer status) {
+        startPage();
+        return getDataTable(serviceRequestMapper.selectMerchantRequests(SecurityUtils.getUserId(), merchantId, status));
+    }
+
+    @PutMapping("/merchant-service-requests/status")
+    public R<Integer> updateMerchantServiceRequestStatus(@RequestBody PetServiceRequest request) {
+        if (request == null || request.getId() == null || !isAllowedStatus(request.getStatus(), 1, 2, 3)) {
+            return R.fail("状态不合法");
+        }
+        PetServiceRequest exists = serviceRequestMapper.selectById(request.getId());
+        if (exists == null || ownedMerchant(exists.getMerchantId()) == null) {
+            return R.fail("咨询不存在或无权处理");
+        }
+        if (!canTransitionServiceRequest(exists.getStatus(), request.getStatus())) {
+            return R.fail("当前订单状态不能更新为「" + requestStatusText(request.getStatus()) + "」");
+        }
+        PetServiceRequest update = new PetServiceRequest();
+        update.setId(request.getId());
+        update.setStatus(request.getStatus());
+        update.setRemark(request.getRemark());
+        update.setUpdateBy(SecurityUtils.getUsername());
+        update.setUpdateTime(new Date());
+        int rows = serviceRequestMapper.updateById(update);
+        if (rows > 0) {
+            notificationService.create(exists.getUserId(), SecurityUtils.getUserId(), "service_request_status", "service_request",
+                    exists.getId(), requestStatusTitle(request.getStatus()),
+                    "你的预约单 #" + exists.getId() + " 已更新为「" + requestStatusText(request.getStatus()) + "」。", "/services");
+        }
+        return R.ok(rows);
+    }
+
+    @PostMapping("/service-reviews")
+    public R<Integer> addServiceReview(@RequestBody PetServiceReview review) {
+        if (review.getRequestId() == null) {
+            return R.fail("请从已完成预约单提交评价");
+        }
+        PetServiceRequest request = serviceRequestMapper.selectById(review.getRequestId());
+        if (request == null || !SecurityUtils.getUserId().equals(request.getUserId())) {
+            return R.fail("预约单不存在或无权评价");
+        }
+        if (request.getStatus() == null || request.getStatus() != 2) {
+            return R.fail("商家完成订单后才能评价");
+        }
+        if (serviceReviewMapper.selectCount(new QueryWrapper<PetServiceReview>().eq("request_id", request.getId())) > 0) {
+            return R.fail("该预约单已评价");
+        }
+        PetServiceItem service = serviceItemMapper.selectById(request.getServiceId());
+        if (service == null) {
+            return R.fail("服务记录不存在，无法评价");
+        }
+        if (review.getServiceId() != null && !request.getServiceId().equals(review.getServiceId())) {
+            return R.fail("评价服务与预约单不匹配");
+        }
+        if (review.getRating() == null || review.getRating() < 1 || review.getRating() > 5) {
+            return R.fail("评分范围应为1到5");
+        }
+        review.setUserId(SecurityUtils.getUserId());
+        review.setServiceId(request.getServiceId());
+        review.setMerchantId(service.getMerchantId());
+        review.setStatus(1);
+        review.setHideStatus(0);
+        review.setTopFlag(0);
+        review.setCreateBy(SecurityUtils.getUsername());
+        review.setCreateTime(new Date());
+        int rows = serviceReviewMapper.insert(review);
+        recalcReviewStats(review.getServiceId(), review.getMerchantId());
+        PetMerchant merchant = merchantMapper.selectById(review.getMerchantId());
+        if (merchant != null) {
+            notificationService.create(merchant.getUserId(), SecurityUtils.getUserId(), "service_review", "service_review",
+                    review.getId(), "收到新的服务评价",
+                    "用户对「" + service.getServiceName() + "」提交了 " + review.getRating() + " 星评价。", "/merchant");
+        }
+        return R.ok(rows);
+    }
+
+    @Anonymous
+    @GetMapping("/services/{serviceId:[0-9]+}/reviews")
+    public TableDataInfo serviceReviews(@PathVariable Long serviceId,
+                                        @RequestParam(required = false) String ratingType) {
+        startPage();
+        return getDataTable(serviceReviewMapper.selectPublicReviews(serviceId, normalizeRatingType(ratingType)));
+    }
+
+    @GetMapping("/merchant-reviews")
+    public TableDataInfo merchantReviews(@RequestParam(required = false) Long merchantId,
+                                         @RequestParam(required = false) Integer hideStatus,
+                                         @RequestParam(required = false) String ratingType) {
+        startPage();
+        return getDataTable(serviceReviewMapper.selectMerchantReviews(SecurityUtils.getUserId(), merchantId, hideStatus, normalizeRatingType(ratingType)));
+    }
+
+    @PostMapping("/merchant-reviews/{reviewId:[0-9]+}/top")
+    public R<Integer> topMerchantReview(@PathVariable Long reviewId, @RequestBody PetServiceReview request) {
+        PetServiceReview review = serviceReviewMapper.selectById(reviewId);
+        if (review == null || ownedMerchant(review.getMerchantId()) == null) {
+            return R.fail("评价不存在或无权处理");
+        }
+        boolean top = request != null && request.getTopFlag() != null && request.getTopFlag() == 1;
+        if (top) {
+            if (review.getStatus() == null || review.getStatus() != 1) {
+                return R.fail("仅公开评价可置顶");
+            }
+            if (review.getRating() == null || review.getRating() < 4) {
+                return R.fail("仅好评支持置顶");
+            }
+            if (review.getHideStatus() != null && review.getHideStatus() == 2) {
+                return R.fail("已屏蔽评价不能置顶");
+            }
+        }
+        UpdateWrapper<PetServiceReview> update = new UpdateWrapper<PetServiceReview>()
+                .eq("id", reviewId)
+                .set("top_flag", top ? 1 : 0)
+                .set("top_time", top ? new Date() : null)
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", new Date());
+        return R.ok(serviceReviewMapper.update(null, update));
+    }
+
+    @PostMapping("/merchant-reviews/{reviewId:[0-9]+}/hide-request")
+    public R<Integer> requestHideReview(@PathVariable Long reviewId, @RequestBody PetServiceReview request) {
+        PetServiceReview review = serviceReviewMapper.selectById(reviewId);
+        if (review == null || ownedMerchant(review.getMerchantId()) == null) {
+            return R.fail("评价不存在或无权处理");
+        }
+        if (review.getStatus() == null || review.getStatus() != 1) {
+            return R.fail("仅公开评价可申请屏蔽");
+        }
+        if (review.getHideStatus() != null && (review.getHideStatus() == 1 || review.getHideStatus() == 2)) {
+            return R.fail("该评价已提交屏蔽申请或已屏蔽");
+        }
+        if (request == null || StringUtils.isEmpty(request.getHideReason())) {
+            return R.fail("请填写申请屏蔽理由");
+        }
+        return R.ok(serviceReviewMapper.update(null, new UpdateWrapper<PetServiceReview>()
+                .eq("id", reviewId)
+                .set("hide_status", 1)
+                .set("hide_reason", request.getHideReason())
+                .set("hide_audit_reason", "")
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", new Date())));
+    }
+
+    @GetMapping("/merchant-boarding/users")
+    public R<List<PetBoardingUserCandidate>> searchBoardingUsers(@RequestParam String keyword) {
+        PetMerchant merchant = currentApprovedMerchantForUser(SecurityUtils.getUserId());
+        if (merchant == null) {
+            return R.fail("商家审核通过后才能搜索客户并发起寄养档案请求");
+        }
+        if (StringUtils.isEmpty(keyword) || keyword.trim().length() < 2) {
+            return R.fail("请输入至少2个字符的用户名或完整用户ID");
+        }
+        return R.ok(boardingRelationMapper.searchUserCandidates(keyword.trim()));
+    }
+
+    @PostMapping("/merchant-boarding/requests")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Long> createBoardingRequest(@RequestBody PetBoardingRelation request) {
+        PetMerchant merchant = currentApprovedMerchantForUser(SecurityUtils.getUserId());
+        if (merchant == null) {
+            return R.fail("商家审核通过后才能发起寄养档案请求");
+        }
+        if (request == null || request.getOwnerUserId() == null || StringUtils.isEmpty(request.getPetName())) {
+            return R.fail("请选择客户并填写准确宠物名");
+        }
+        if (SecurityUtils.getUserId().equals(request.getOwnerUserId())) {
+            return R.fail("不能向当前商家账号自己发起寄养档案请求");
+        }
+        String petName = request.getPetName().trim();
+        List<PetProfile> matchedPets = petProfileMapper.selectList(new QueryWrapper<PetProfile>()
+                .eq("user_id", request.getOwnerUserId()).eq("name", petName));
+        if (matchedPets.size() != 1) {
+            return R.fail("用户或宠物信息不匹配，请确认用户名/用户ID和准确宠物名");
+        }
+        PetProfile ownerPet = matchedPets.get(0);
+        long openCount = boardingRelationMapper.selectCount(new QueryWrapper<PetBoardingRelation>()
+                .eq("merchant_id", merchant.getId())
+                .eq("owner_pet_id", ownerPet.getId())
+                .in("status", Arrays.asList(0, 1)));
+        if (openCount > 0) {
+            return R.fail("该宠物已有待确认或进行中的寄养关系");
+        }
+        PetBoardingRelation relation = new PetBoardingRelation();
+        relation.setMerchantId(merchant.getId());
+        relation.setMerchantUserId(merchant.getUserId());
+        relation.setOwnerUserId(request.getOwnerUserId());
+        relation.setOwnerPetId(ownerPet.getId());
+        relation.setPetName(ownerPet.getName());
+        relation.setRequestNote(request.getRequestNote());
+        relation.setStatus(0);
+        relation.setRequestTime(new Date());
+        relation.setCreateBy(SecurityUtils.getUsername());
+        relation.setCreateTime(new Date());
+        boardingRelationMapper.insert(relation);
+        notificationService.create(request.getOwnerUserId(), SecurityUtils.getUserId(), "boarding_request", "boarding_relation",
+                relation.getId(), "商家请求寄养档案授权",
+                merchant.getName() + " 请求复制宠物「" + ownerPet.getName() + "」的档案用于临时寄养，请到宠物档案页确认。", "/pets");
+        return R.ok(relation.getId());
+    }
+
+    @GetMapping("/merchant-boarding/relations")
+    public TableDataInfo merchantBoardingRelations(@RequestParam(required = false) Long merchantId,
+                                                   @RequestParam(required = false) Integer status) {
+        if (currentMerchantForUser(SecurityUtils.getUserId()) == null) {
+            return getDataTable(java.util.Collections.emptyList());
+        }
+        startPage();
+        return getDataTable(boardingRelationMapper.selectMerchantRelations(SecurityUtils.getUserId(), merchantId, status));
+    }
+
+    @GetMapping("/boarding/relations")
+    public TableDataInfo ownerBoardingRelations(@RequestParam(required = false) Integer status) {
+        startPage();
+        return getDataTable(boardingRelationMapper.selectOwnerRelations(SecurityUtils.getUserId(), status));
+    }
+
+    @PostMapping("/boarding/relations/{id:[0-9]+}/approve")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Integer> approveBoardingRelation(@PathVariable Long id) {
+        PetBoardingRelation relation = boardingRelationMapper.selectById(id);
+        if (relation == null || !SecurityUtils.getUserId().equals(relation.getOwnerUserId())) {
+            return R.fail("寄养请求不存在或无权处理");
+        }
+        if (relation.getStatus() == null || relation.getStatus() != 0) {
+            return R.fail("该寄养请求已处理");
+        }
+        PetMerchant merchant = merchantMapper.selectById(relation.getMerchantId());
+        PetProfile ownerPet = petProfileMapper.selectOne(new QueryWrapper<PetProfile>()
+                .eq("id", relation.getOwnerPetId()).eq("user_id", relation.getOwnerUserId()));
+        if (merchant == null || ownerPet == null) {
+            return R.fail("寄养请求关联的商家或宠物不存在");
+        }
+        PetProfile merchantPet = copyPetForBoarding(ownerPet, relation, merchant);
+        copyHealthRecordsForBoarding(ownerPet, merchantPet, relation);
+        PetBoardingRelation update = new PetBoardingRelation();
+        update.setId(relation.getId());
+        update.setMerchantPetId(merchantPet.getId());
+        update.setStatus(1);
+        update.setConfirmTime(new Date());
+        update.setUpdateBy(SecurityUtils.getUsername());
+        update.setUpdateTime(new Date());
+        int rows = boardingRelationMapper.updateById(update);
+        notificationService.create(relation.getMerchantUserId(), SecurityUtils.getUserId(), "boarding_approved", "boarding_relation",
+                relation.getId(), "客户已同意寄养档案授权",
+                "宠物「" + relation.getPetName() + "」的档案已复制到商家寄养档案。", "/pets");
+        return R.ok(rows);
+    }
+
+    @PostMapping("/boarding/relations/{id:[0-9]+}/reject")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Integer> rejectBoardingRelation(@PathVariable Long id) {
+        PetBoardingRelation relation = boardingRelationMapper.selectById(id);
+        if (relation == null || !SecurityUtils.getUserId().equals(relation.getOwnerUserId())) {
+            return R.fail("寄养请求不存在或无权处理");
+        }
+        if (relation.getStatus() == null || relation.getStatus() != 0) {
+            return R.fail("该寄养请求已处理");
+        }
+        int rows = boardingRelationMapper.update(null, new UpdateWrapper<PetBoardingRelation>()
+                .eq("id", id)
+                .eq("owner_user_id", SecurityUtils.getUserId())
+                .eq("status", 0)
+                .set("status", 2)
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", new Date()));
+        notificationService.create(relation.getMerchantUserId(), SecurityUtils.getUserId(), "boarding_rejected", "boarding_relation",
+                relation.getId(), "客户拒绝了寄养档案授权",
+                "宠物「" + relation.getPetName() + "」的档案授权请求已被客户拒绝。", "/pets");
+        return R.ok(rows);
+    }
+
+    @PostMapping("/boarding/relations/{id:[0-9]+}/cancel")
+    @Transactional(rollbackFor = Exception.class)
+    public R<Integer> cancelBoardingRelation(@PathVariable Long id) {
+        PetBoardingRelation relation = boardingRelationMapper.selectById(id);
+        if (relation == null) {
+            return R.fail("寄养关系不存在");
+        }
+        Long userId = SecurityUtils.getUserId();
+        boolean ownerCancel = userId.equals(relation.getOwnerUserId());
+        boolean merchantCancel = userId.equals(relation.getMerchantUserId());
+        if (!ownerCancel && !merchantCancel) {
+            return R.fail("无权取消该寄养关系");
+        }
+        if (relation.getStatus() == null || relation.getStatus() != 1) {
+            return R.fail("只有进行中的寄养关系可以取消");
+        }
+        syncBoardingBackToOwner(relation);
+        int status = ownerCancel ? 3 : 4;
+        int rows = boardingRelationMapper.update(null, new UpdateWrapper<PetBoardingRelation>()
+                .eq("id", id)
+                .eq("status", 1)
+                .set("status", status)
+                .set("cancel_by", userId)
+                .set("cancel_time", new Date())
+                .set("update_by", SecurityUtils.getUsername())
+                .set("update_time", new Date()));
+        Long receiver = ownerCancel ? relation.getMerchantUserId() : relation.getOwnerUserId();
+        String actionUrl = "/pets";
+        notificationService.create(receiver, userId, "boarding_cancelled", "boarding_relation",
+                relation.getId(), "寄养关系已取消",
+                "宠物「" + relation.getPetName() + "」的最新档案已同步回客户账户，商家侧临时档案已收回。", actionUrl);
+        return R.ok(rows);
+    }
+
+    @GetMapping("/health-records")
+    public TableDataInfo healthRecords(@RequestParam(required = false) Long petId) {
+        startPage();
+        QueryWrapper<PetHealthRecord> wrapper = new QueryWrapper<PetHealthRecord>().eq("user_id", SecurityUtils.getUserId());
+        if (petId != null) {
+            wrapper.eq("pet_id", petId);
+        }
+        wrapper.orderByDesc("record_date").orderByDesc("create_time");
+        return getDataTable(healthRecordMapper.selectList(wrapper));
+    }
+
+    @PostMapping("/health-records")
+    public R<Integer> addHealthRecord(@RequestBody PetHealthRecord record) {
+        if (!isOwnedPet(record.getPetId())) {
+            return R.fail("宠物档案不存在或无权维护");
+        }
+        record.setUserId(SecurityUtils.getUserId());
+        attachBoardingRelationForHealthRecord(record);
+        record.setCreateBy(SecurityUtils.getUsername());
+        record.setCreateTime(new Date());
+        return R.ok(healthRecordMapper.insert(record));
+    }
+
+    @PutMapping("/health-records")
+    public R<Integer> updateHealthRecord(@RequestBody PetHealthRecord record) {
+        if (record == null || record.getId() == null) {
+            return R.fail("健康记录不存在");
+        }
+        if (!isOwnedPet(record.getPetId())) {
+            return R.fail("宠物档案不存在或无权维护");
+        }
+        record.setUserId(SecurityUtils.getUserId());
+        attachBoardingRelationForHealthRecord(record);
+        record.setUpdateBy(SecurityUtils.getUsername());
+        record.setUpdateTime(new Date());
+        return R.ok(healthRecordMapper.update(record, new UpdateWrapper<PetHealthRecord>()
+                .eq("id", record.getId()).eq("user_id", record.getUserId())));
+    }
+
+    @DeleteMapping("/health-records/{ids:[0-9,]+}")
+    public R<Integer> deleteHealthRecords(@PathVariable Long[] ids) {
+        return R.ok(healthRecordMapper.delete(new QueryWrapper<PetHealthRecord>()
+                .in("id", Arrays.asList(ids)).eq("user_id", SecurityUtils.getUserId())));
+    }
+
+    @GetMapping("/reminders")
+    public TableDataInfo reminders(@RequestParam(required = false) Long petId) {
+        startPage();
+        QueryWrapper<PetReminder> wrapper = new QueryWrapper<PetReminder>().eq("user_id", SecurityUtils.getUserId());
+        if (petId != null) {
+            wrapper.eq("pet_id", petId);
+        }
+        wrapper.orderByAsc("due_time");
+        return getDataTable(reminderMapper.selectList(wrapper));
+    }
+
+    @PostMapping("/reminders")
+    public R<Integer> addReminder(@RequestBody PetReminder reminder) {
+        if (!isOwnedPet(reminder.getPetId())) {
+            return R.fail("宠物档案不存在或无权维护");
+        }
+        reminder.setUserId(SecurityUtils.getUserId());
+        reminder.setStatus(defaultInt(reminder.getStatus(), 0));
+        reminder.setNoticeSent(0);
+        reminder.setCreateBy(SecurityUtils.getUsername());
+        reminder.setCreateTime(new Date());
+        return R.ok(reminderMapper.insert(reminder));
+    }
+
+    @PutMapping("/reminders")
+    public R<Integer> updateReminder(@RequestBody PetReminder reminder) {
+        if (reminder == null || reminder.getId() == null) {
+            return R.fail("提醒不存在");
+        }
+        if (!isOwnedPet(reminder.getPetId())) {
+            return R.fail("宠物档案不存在或无权维护");
+        }
+        reminder.setUserId(SecurityUtils.getUserId());
+        if (reminder.getStatus() != null && reminder.getStatus() == 0
+                && reminder.getDueTime() != null && reminder.getDueTime().after(new Date())) {
+            reminder.setNoticeSent(0);
+        }
+        reminder.setUpdateBy(SecurityUtils.getUsername());
+        reminder.setUpdateTime(new Date());
+        return R.ok(reminderMapper.update(reminder, new UpdateWrapper<PetReminder>()
+                .eq("id", reminder.getId()).eq("user_id", reminder.getUserId())));
+    }
+
+    @DeleteMapping("/reminders/{ids:[0-9,]+}")
+    public R<Integer> deleteReminders(@PathVariable Long[] ids) {
+        return R.ok(reminderMapper.delete(new QueryWrapper<PetReminder>()
+                .in("id", Arrays.asList(ids)).eq("user_id", SecurityUtils.getUserId())));
+    }
+
+    @DeleteMapping("/pets/{ids:[0-9,]+}")
+    public R<Integer> deletePets(@PathVariable Long[] ids) {
+        if (hasActiveBoardingRelation(Arrays.asList(ids), SecurityUtils.getUserId())) {
+            return R.fail("存在待确认或寄养中的宠物档案，请先处理寄养关系后再删除");
+        }
+        return R.ok(petProfileMapper.delete(new QueryWrapper<PetProfile>()
+                .in("id", Arrays.asList(ids)).eq("user_id", SecurityUtils.getUserId())));
+    }
+
+    private int deletePostCascade(List<PetPost> posts) {
+        if (CollectionUtils.isEmpty(posts)) {
+            return 0;
+        }
+        List<Long> ids = posts.stream().map(PetPost::getId).collect(java.util.stream.Collectors.toList());
+        Set<Long> authorIds = posts.stream().map(PetPost::getAuthorId).collect(java.util.stream.Collectors.toSet());
+        Set<Long> topicIds = postTopicMapper.selectList(new QueryWrapper<PetPostTopic>().in("post_id", ids)).stream()
+                .map(PetPostTopic::getTopicId).collect(java.util.stream.Collectors.toSet());
+        postMediaMapper.delete(new QueryWrapper<PetPostMedia>().in("post_id", ids));
+        postTopicMapper.delete(new QueryWrapper<PetPostTopic>().in("post_id", ids));
+        commentMapper.delete(new QueryWrapper<PetComment>().in("post_id", ids));
+        interactionMapper.delete(new QueryWrapper<PetInteraction>()
+                .eq("target_type", "post").in("target_id", ids));
+        int rows = postMapper.deleteBatchIds(ids);
+        recalcTopicCounts(topicIds);
+        authorIds.forEach(this::recalcProfilePostCount);
+        return rows;
+    }
+
+    private void hydratePost(PetPost post) {
+        if (post == null || post.getId() == null) {
+            return;
+        }
+        List<Object> mediaUrls = postMediaMapper.selectObjs(new QueryWrapper<PetPostMedia>()
+                .select("url").eq("post_id", post.getId()).orderByAsc("sort_order"));
+        List<Object> topicIds = postTopicMapper.selectObjs(new QueryWrapper<PetPostTopic>()
+                .select("topic_id").eq("post_id", post.getId()));
+        post.setMediaUrls(mediaUrls.stream().map(String::valueOf).collect(java.util.stream.Collectors.toList()));
+        post.setTopicIds(topicIds.stream().map(item -> Long.valueOf(String.valueOf(item))).collect(java.util.stream.Collectors.toList()));
+    }
+
+    private boolean hasInteraction(Long userId, Long postId, String type) {
+        return interactionMapper.selectCount(new QueryWrapper<PetInteraction>()
+                .eq("user_id", userId).eq("target_type", "post").eq("target_id", postId).eq("interaction_type", type)) > 0;
+    }
+
+    private PetPost publicPost(Long postId) {
+        if (postId == null) {
+            return null;
+        }
+        return postMapper.selectOne(new QueryWrapper<PetPost>()
+                .eq("id", postId).eq("audit_status", 1).eq("status", 0));
+    }
+
+    private Long currentUserIdOrNull() {
+        try {
+            return SecurityUtils.getUserId();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void recalcTopicCounts(Set<Long> topicIds) {
+        if (CollectionUtils.isEmpty(topicIds)) {
+            return;
+        }
+        for (Long topicId : topicIds) {
+            long count = postTopicMapper.selectCount(new QueryWrapper<PetPostTopic>()
+                    .eq("topic_id", topicId)
+                    .inSql("post_id", "select id from pet_post where audit_status = 1 and status = 0"));
+            topicMapper.update(null, new UpdateWrapper<PetTopic>().eq("id", topicId).set("post_count", count));
+        }
+    }
+
+    private void recalcProfilePostCount(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        long count = postMapper.selectCount(new QueryWrapper<PetPost>()
+                .eq("author_id", userId).eq("status", 0).eq("audit_status", 1));
+        userProfileMapper.update(null, new UpdateWrapper<PetUserProfile>()
+                .eq("user_id", userId).set("post_count", count));
+    }
+
+    private void savePostMedia(PetPost post) {
+        if (CollectionUtils.isEmpty(post.getMediaUrls())) {
+            return;
+        }
+        int index = 0;
+        for (String url : post.getMediaUrls()) {
+            if (StringUtils.isEmpty(url)) {
+                continue;
+            }
+            PetPostMedia media = new PetPostMedia();
+            media.setPostId(post.getId());
+            media.setUrl(url);
+            media.setMediaType(url.toLowerCase().matches(".*\\.(mp4|mov|m4v|webm)$") ? "video" : "image");
+            media.setSortOrder(index++);
+            postMediaMapper.insert(media);
+        }
+    }
+
+    private void savePostTopics(PetPost post) {
+        if (CollectionUtils.isEmpty(post.getTopicIds())) {
+            return;
+        }
+        for (Long topicId : post.getTopicIds()) {
+            PetPostTopic relation = new PetPostTopic();
+            relation.setPostId(post.getId());
+            relation.setTopicId(topicId);
+            postTopicMapper.insert(relation);
+        }
+    }
+
+    private void decorateBoardingPets(List<PetProfile> pets, Long userId) {
+        if (CollectionUtils.isEmpty(pets) || userId == null) {
+            return;
+        }
+        Map<Long, PetBoardingRelation> ownerRelations = new HashMap<>();
+        for (PetBoardingRelation relation : boardingRelationMapper.selectOwnerRelations(userId, 1)) {
+            if (relation.getOwnerPetId() != null) {
+                ownerRelations.put(relation.getOwnerPetId(), relation);
+            }
+        }
+        Map<Long, PetBoardingRelation> merchantRelations = new HashMap<>();
+        for (PetBoardingRelation relation : boardingRelationMapper.selectMerchantRelations(userId, null, 1)) {
+            if (relation.getMerchantPetId() != null) {
+                merchantRelations.put(relation.getMerchantPetId(), relation);
+            }
+        }
+        for (PetProfile pet : pets) {
+            PetBoardingRelation ownerRelation = ownerRelations.get(pet.getId());
+            if (ownerRelation != null) {
+                pet.setBoardingFlag(true);
+                pet.setBoardingRole("owner");
+                pet.setBoardingRelationId(ownerRelation.getId());
+                pet.setBoardingMerchantName(ownerRelation.getMerchantName());
+                continue;
+            }
+            PetBoardingRelation merchantRelation = merchantRelations.get(pet.getId());
+            if (merchantRelation != null) {
+                pet.setBoardingFlag(true);
+                pet.setBoardingRole("merchant");
+                pet.setBoardingRelationId(merchantRelation.getId());
+                pet.setBoardingMerchantName(merchantRelation.getMerchantName());
+                pet.setBoardingOwnerName(displayName(merchantRelation.getOwnerNickName(), merchantRelation.getOwnerUserName(), merchantRelation.getOwnerUserId()));
+            }
+        }
+    }
+
+    private PetProfile copyPetForBoarding(PetProfile ownerPet, PetBoardingRelation relation, PetMerchant merchant) {
+        PetProfile merchantPet = new PetProfile();
+        copyPetFields(ownerPet, merchantPet);
+        merchantPet.setUserId(merchant.getUserId());
+        merchantPet.setStatus(defaultInt(ownerPet.getStatus(), 0));
+        merchantPet.setRemark("寄养临时档案，来源用户ID：" + relation.getOwnerUserId() + "，来源宠物ID：" + ownerPet.getId());
+        merchantPet.setCreateBy(SecurityUtils.getUsername());
+        merchantPet.setCreateTime(new Date());
+        petProfileMapper.insert(merchantPet);
+        return merchantPet;
+    }
+
+    private void copyPetFields(PetProfile source, PetProfile target) {
+        target.setName(source.getName());
+        target.setSpecies(source.getSpecies());
+        target.setBreed(source.getBreed());
+        target.setGender(source.getGender());
+        target.setBirthday(source.getBirthday());
+        target.setWeightKg(source.getWeightKg());
+        target.setAvatar(source.getAvatar());
+        target.setHealthStatus(source.getHealthStatus());
+        target.setNeutered(source.getNeutered());
+        target.setStatus(source.getStatus());
+    }
+
+    private void copyHealthRecordsForBoarding(PetProfile ownerPet, PetProfile merchantPet, PetBoardingRelation relation) {
+        List<PetHealthRecord> ownerRecords = healthRecordMapper.selectList(new QueryWrapper<PetHealthRecord>()
+                .eq("user_id", relation.getOwnerUserId()).eq("pet_id", ownerPet.getId()));
+        for (PetHealthRecord source : ownerRecords) {
+            PetHealthRecord copy = new PetHealthRecord();
+            copyHealthRecordFields(source, copy);
+            copy.setUserId(relation.getMerchantUserId());
+            copy.setPetId(merchantPet.getId());
+            copy.setBoardingRelationId(relation.getId());
+            copy.setSourceRecordId(source.getId());
+            copy.setCreateBy(SecurityUtils.getUsername());
+            copy.setCreateTime(new Date());
+            healthRecordMapper.insert(copy);
+        }
+    }
+
+    private void syncBoardingBackToOwner(PetBoardingRelation relation) {
+        if (relation.getMerchantPetId() == null) {
+            return;
+        }
+        PetProfile merchantPet = petProfileMapper.selectOne(new QueryWrapper<PetProfile>()
+                .eq("id", relation.getMerchantPetId()).eq("user_id", relation.getMerchantUserId()));
+        PetProfile ownerPet = petProfileMapper.selectOne(new QueryWrapper<PetProfile>()
+                .eq("id", relation.getOwnerPetId()).eq("user_id", relation.getOwnerUserId()));
+        if (merchantPet == null || ownerPet == null) {
+            return;
+        }
+        PetProfile ownerUpdate = new PetProfile();
+        ownerUpdate.setId(ownerPet.getId());
+        ownerUpdate.setUserId(ownerPet.getUserId());
+        copyPetFields(merchantPet, ownerUpdate);
+        ownerUpdate.setUpdateBy(SecurityUtils.getUsername());
+        ownerUpdate.setUpdateTime(new Date());
+        petProfileMapper.update(ownerUpdate, new UpdateWrapper<PetProfile>()
+                .eq("id", ownerPet.getId()).eq("user_id", ownerPet.getUserId()));
+
+        List<PetHealthRecord> merchantRecords = healthRecordMapper.selectList(new QueryWrapper<PetHealthRecord>()
+                .eq("user_id", relation.getMerchantUserId()).eq("pet_id", merchantPet.getId()));
+        for (PetHealthRecord merchantRecord : merchantRecords) {
+            PetHealthRecord ownerRecord = null;
+            if (merchantRecord.getSourceRecordId() != null) {
+                ownerRecord = healthRecordMapper.selectOne(new QueryWrapper<PetHealthRecord>()
+                        .eq("id", merchantRecord.getSourceRecordId())
+                        .eq("user_id", relation.getOwnerUserId())
+                        .eq("pet_id", relation.getOwnerPetId()));
+            }
+            if (ownerRecord == null) {
+                ownerRecord = new PetHealthRecord();
+                copyHealthRecordFields(merchantRecord, ownerRecord);
+                ownerRecord.setUserId(relation.getOwnerUserId());
+                ownerRecord.setPetId(relation.getOwnerPetId());
+                ownerRecord.setCreateBy(SecurityUtils.getUsername());
+                ownerRecord.setCreateTime(new Date());
+                healthRecordMapper.insert(ownerRecord);
+            } else {
+                PetHealthRecord update = new PetHealthRecord();
+                update.setId(ownerRecord.getId());
+                update.setUserId(ownerRecord.getUserId());
+                update.setPetId(ownerRecord.getPetId());
+                copyHealthRecordFields(merchantRecord, update);
+                update.setUpdateBy(SecurityUtils.getUsername());
+                update.setUpdateTime(new Date());
+                healthRecordMapper.update(update, new UpdateWrapper<PetHealthRecord>()
+                        .eq("id", ownerRecord.getId()).eq("user_id", ownerRecord.getUserId()));
+            }
+        }
+        healthRecordMapper.delete(new QueryWrapper<PetHealthRecord>()
+                .eq("user_id", relation.getMerchantUserId()).eq("pet_id", merchantPet.getId()));
+        petProfileMapper.delete(new QueryWrapper<PetProfile>()
+                .eq("id", merchantPet.getId()).eq("user_id", relation.getMerchantUserId()));
+    }
+
+    private void copyHealthRecordFields(PetHealthRecord source, PetHealthRecord target) {
+        target.setRecordType(source.getRecordType());
+        target.setRecordDate(source.getRecordDate());
+        target.setNextDueDate(source.getNextDueDate());
+        target.setTitle(source.getTitle());
+        target.setDescription(source.getDescription());
+        target.setAttachmentUrls(source.getAttachmentUrls());
+    }
+
+    private void attachBoardingRelationForHealthRecord(PetHealthRecord record) {
+        if (record == null || record.getPetId() == null) {
+            return;
+        }
+        PetBoardingRelation relation = boardingRelationMapper.selectOne(new QueryWrapper<PetBoardingRelation>()
+                .eq("merchant_user_id", SecurityUtils.getUserId())
+                .eq("merchant_pet_id", record.getPetId())
+                .eq("status", 1)
+                .last("limit 1"));
+        if (relation != null) {
+            record.setBoardingRelationId(relation.getId());
+        }
+    }
+
+    private boolean isOwnedPet(Long petId) {
+        if (petId == null) {
+            return true;
+        }
+        return petProfileMapper.selectCount(new QueryWrapper<PetProfile>()
+                .eq("id", petId).eq("user_id", SecurityUtils.getUserId())) > 0;
+    }
+
+    private boolean hasActiveBoardingRelation(List<Long> petIds, Long userId) {
+        if (CollectionUtils.isEmpty(petIds) || userId == null) {
+            return false;
+        }
+        long ownerCount = boardingRelationMapper.selectCount(new QueryWrapper<PetBoardingRelation>()
+                .eq("owner_user_id", userId).in("owner_pet_id", petIds).in("status", Arrays.asList(0, 1)));
+        if (ownerCount > 0) {
+            return true;
+        }
+        return boardingRelationMapper.selectCount(new QueryWrapper<PetBoardingRelation>()
+                .eq("merchant_user_id", userId).in("merchant_pet_id", petIds).eq("status", 1)) > 0;
+    }
+
+    private boolean canTransitionServiceRequest(Integer currentStatus, Integer nextStatus) {
+        if (currentStatus == null || nextStatus == null || currentStatus.equals(nextStatus)) {
+            return false;
+        }
+        if (Integer.valueOf(0).equals(currentStatus)) {
+            return Integer.valueOf(1).equals(nextStatus) || Integer.valueOf(3).equals(nextStatus);
+        }
+        if (Integer.valueOf(1).equals(currentStatus)) {
+            return Integer.valueOf(2).equals(nextStatus) || Integer.valueOf(3).equals(nextStatus);
+        }
+        return false;
+    }
+
+    private String displayName(String nickName, String userName, Long userId) {
+        if (StringUtils.isNotEmpty(nickName)) {
+            return nickName;
+        }
+        if (StringUtils.isNotEmpty(userName)) {
+            return userName;
+        }
+        return userId == null ? "" : String.valueOf(userId);
+    }
+
+    private static Integer defaultInt(Integer value, Integer fallback) {
+        return value == null ? fallback : value;
+    }
+
+    private PetMerchant ownedMerchant(Long merchantId) {
+        if (merchantId == null) {
+            return null;
+        }
+        return merchantMapper.selectOne(new QueryWrapper<PetMerchant>()
+                .eq("id", merchantId).eq("user_id", SecurityUtils.getUserId()));
+    }
+
+    private PetMerchant currentMerchantForUser(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return merchantMapper.selectOne(new QueryWrapper<PetMerchant>()
+                .eq("user_id", userId).orderByDesc("create_time").last("limit 1"));
+    }
+
+    private PetMerchant currentApprovedMerchantForUser(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return merchantMapper.selectOne(new QueryWrapper<PetMerchant>()
+                .eq("user_id", userId).eq("qualification_status", 1).eq("status", 0)
+                .orderByDesc("create_time").last("limit 1"));
+    }
+
+    private PetMerchant ownedApprovedMerchant(Long merchantId) {
+        if (merchantId == null) {
+            return null;
+        }
+        return merchantMapper.selectOne(new QueryWrapper<PetMerchant>()
+                .eq("id", merchantId).eq("user_id", SecurityUtils.getUserId())
+                .eq("qualification_status", 1).eq("status", 0));
+    }
+
+    private PetServiceRequest authorizedServiceRequest(Long requestId) {
+        if (requestId == null) {
+            return null;
+        }
+        PetServiceRequest request = serviceRequestMapper.selectById(requestId);
+        if (request == null) {
+            return null;
+        }
+        Long userId = SecurityUtils.getUserId();
+        if (userId.equals(request.getUserId())) {
+            return request;
+        }
+        return ownedMerchant(request.getMerchantId()) == null ? null : request;
+    }
+
+    private String serviceRequestActorRole(PetServiceRequest request) {
+        Long userId = SecurityUtils.getUserId();
+        if (userId.equals(request.getUserId())) {
+            return "user";
+        }
+        if (ownedMerchant(request.getMerchantId()) != null) {
+            return "merchant";
+        }
+        return null;
+    }
+
+    private PetServiceItem visibleService(Long serviceId) {
+        if (serviceId == null) {
+            return null;
+        }
+        return serviceItemMapper.selectOne(new QueryWrapper<PetServiceItem>()
+                .eq("id", serviceId).eq("status", 0)
+                .inSql("merchant_id", "select id from pet_merchant where status = 0 and qualification_status = 1"));
+    }
+
+    private void recalcReviewStats(Long serviceId, Long merchantId) {
+        if (serviceId != null) {
+            List<PetServiceReview> serviceReviews = serviceReviewMapper.selectList(new QueryWrapper<PetServiceReview>()
+                    .eq("service_id", serviceId).eq("status", 1));
+            serviceItemMapper.update(null, new UpdateWrapper<PetServiceItem>().eq("id", serviceId)
+                    .set("review_score", averageRating(serviceReviews)).set("review_count", serviceReviews.size()));
+        }
+        if (merchantId != null) {
+            List<PetServiceReview> merchantReviews = serviceReviewMapper.selectList(new QueryWrapper<PetServiceReview>()
+                    .eq("merchant_id", merchantId).eq("status", 1));
+            merchantMapper.update(null, new UpdateWrapper<PetMerchant>().eq("id", merchantId)
+                    .set("score", averageRating(merchantReviews)).set("review_count", merchantReviews.size()));
+        }
+    }
+
+    private void notifyServiceMessage(PetServiceRequest request, String actorRole, String content) {
+        Long receiverUserId = null;
+        String actionUrl = "/services";
+        if ("user".equals(actorRole)) {
+            PetMerchant merchant = merchantMapper.selectById(request.getMerchantId());
+            if (merchant != null) {
+                receiverUserId = merchant.getUserId();
+                actionUrl = "/merchant";
+            }
+        } else if ("merchant".equals(actorRole)) {
+            receiverUserId = request.getUserId();
+        }
+        if (receiverUserId == null || receiverUserId.equals(SecurityUtils.getUserId())) {
+            return;
+        }
+        String snippet = StringUtils.substring(content == null ? "" : content, 0, 80);
+        notificationService.create(receiverUserId, SecurityUtils.getUserId(), "service_message", "service_request",
+                request.getId(), "订单对话有新消息", snippet, actionUrl);
+    }
+
+    private String requestStatusTitle(Integer status) {
+        if (status != null && status == 1) {
+            return "预约已被接受";
+        }
+        if (status != null && status == 2) {
+            return "服务订单已完成";
+        }
+        if (status != null && status == 3) {
+            return "预约已取消";
+        }
+        return "预约状态已更新";
+    }
+
+    private String requestStatusText(Integer status) {
+        if (status != null && status == 1) {
+            return "接受预约";
+        }
+        if (status != null && status == 2) {
+            return "已完成";
+        }
+        if (status != null && status == 3) {
+            return "已取消";
+        }
+        return "待处理";
+    }
+
+    private BigDecimal averageRating(List<PetServiceReview> reviews) {
+        if (reviews == null || reviews.isEmpty()) {
+            return new BigDecimal("0.00");
+        }
+        int sum = 0;
+        for (PetServiceReview review : reviews) {
+            sum += review.getRating() == null ? 0 : review.getRating();
+        }
+        return BigDecimal.valueOf(sum).divide(BigDecimal.valueOf(reviews.size()), 2, RoundingMode.HALF_UP);
+    }
+
+    private String normalizeRatingType(String ratingType) {
+        if ("good".equals(ratingType) || "middle".equals(ratingType) || "bad".equals(ratingType)) {
+            return ratingType;
+        }
+        return null;
+    }
+
+    private boolean isAllowedStatus(Integer status, Integer... allowedStatuses) {
+        if (status == null) {
+            return false;
+        }
+        for (Integer allowedStatus : allowedStatuses) {
+            if (status.equals(allowedStatus)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

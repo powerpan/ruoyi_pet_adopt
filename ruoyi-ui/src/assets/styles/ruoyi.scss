@@ -1,0 +1,449 @@
+/**
+* 通用css样式布局处理
+* Copyright (c) 2019 ruoyi
+*/
+
+/** 基础通用 **/
+.pt5 {
+  padding-top: 5px;
+}
+
+.pr5 {
+  padding-right: 5px;
+}
+
+.pb5 {
+  padding-bottom: 5px;
+}
+
+.mt5 {
+  margin-top: 5px;
+}
+
+.mr5 {
+  margin-right: 5px;
+}
+
+.mb5 {
+  margin-bottom: 5px;
+}
+
+.mb8 {
+  margin-bottom: 8px;
+}
+
+.ml5 {
+  margin-left: 5px;
+}
+
+.mt10 {
+  margin-top: 10px;
+}
+
+.mr10 {
+  margin-right: 10px;
+}
+
+.mb10 {
+  margin-bottom: 10px;
+}
+.ml10 {
+	margin-left: 10px;
+}
+
+.mt20 {
+  margin-top: 20px;
+}
+
+.mr20 {
+  margin-right: 20px;
+}
+
+.mb20 {
+  margin-bottom: 20px;
+}
+.ml20 {
+	margin-left: 20px;
+}
+
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+  font-weight: 500;
+  line-height: 1.1;
+  color: inherit;
+}
+
+.el-message-box__status + .el-message-box__message{
+  word-break: break-word;
+}
+
+.el-dialog:not(.is-fullscreen) {
+  margin-top: 6vh !important;
+}
+
+.el-dialog__wrapper.scrollbar .el-dialog .el-dialog__body {
+  overflow: auto;
+  overflow-x: hidden;
+  max-height: 70vh;
+  padding: 10px 20px 0;
+}
+
+.el-table {
+  .el-table__header-wrapper, .el-table__fixed-header-wrapper {
+    th {
+      word-break: break-word;
+      background-color: #f8f8f9;
+      color: #515a6e;
+      height: 40px;
+      font-size: 13px;
+    }
+  }
+
+  .el-table__body-wrapper {
+    .el-button [class*="el-icon-"] + span {
+      margin-left: 1px;
+    }
+  }
+}
+
+/** 表单布局 **/
+.form-header {
+  font-size: 15px;
+  color: #6379bb;
+  border-bottom: 1px solid #ddd;
+  margin: 8px 10px 25px 10px;
+  padding-bottom: 5px
+}
+
+/** 表格布局 **/
+.pagination-container {
+  position: relative;
+  height: 25px;
+  margin-bottom: 10px;
+  margin-top: 15px;
+  padding: 10px 20px !important;
+}
+
+/* tree border */
+.tree-border {
+  margin-top: 5px;
+  border: 1px solid #e5e6e7;
+  background: #FFFFFF none;
+  border-radius: 4px;
+}
+
+.pagination-container .el-pagination {
+  right: 0;
+  position: absolute;
+}
+
+@media (max-width: 768px) {
+  .pagination-container .el-pagination > .el-pagination__jump {
+    display: none !important;
+  }
+  .pagination-container .el-pagination > .el-pagination__sizes {
+    display: none !important;
+  }
+}
+
+.el-table .fixed-width .el-button--mini {
+  padding-left: 0;
+  padding-right: 0;
+  width: inherit;
+}
+
+/** 表格更多操作下拉样式 */
+.el-table .el-dropdown-link,.el-table .el-dropdown-selfdefine {
+	cursor: pointer;
+	margin-left: 5px;
+}
+
+.el-table .el-dropdown, .el-icon-arrow-down {
+  font-size: 12px;
+}
+
+.el-tree-node__content > .el-checkbox {
+  margin-right: 8px;
+}
+
+.list-group-striped > .list-group-item {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.list-group {
+  padding-left: 0px;
+  list-style: none;
+}
+
+.list-group-item {
+  border-bottom: 1px solid #e7eaec;
+  border-top: 1px solid #e7eaec;
+  margin-bottom: -1px;
+  padding: 11px 0px;
+  font-size: 13px;
+}
+
+.pull-right {
+  float: right !important;
+}
+
+.el-card__header {
+  padding: 14px 15px 7px;
+  min-height: 40px;
+}
+
+.el-card__body {
+  padding: 15px 20px 20px 20px;
+}
+
+.card-box {
+  padding-right: 15px;
+  padding-left: 15px;
+  margin-bottom: 10px;
+}
+
+/* button color */
+.el-button--cyan.is-active,
+.el-button--cyan:active {
+  background: #20B2AA;
+  border-color: #20B2AA;
+  color: #FFFFFF;
+}
+
+.el-button--cyan:focus,
+.el-button--cyan:hover {
+  background: #48D1CC;
+  border-color: #48D1CC;
+  color: #FFFFFF;
+}
+
+.el-button--cyan {
+  background-color: #20B2AA;
+  border-color: #20B2AA;
+  color: #FFFFFF;
+}
+
+/* text color */
+.text-navy {
+  color: #1ab394;
+}
+
+.text-primary {
+  color: inherit;
+}
+
+.text-success {
+  color: #1c84c6;
+}
+
+.text-info {
+  color: #23c6c8;
+}
+
+.text-warning {
+  color: #f8ac59;
+}
+
+.text-danger {
+  color: #ed5565;
+}
+
+.text-muted {
+  color: #888888;
+}
+
+/* image */
+.img-circle {
+  border-radius: 50%;
+}
+
+.img-lg {
+  width: 120px;
+  height: 120px;
+}
+
+.avatar-upload-preview {
+  position: relative;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  box-shadow: 0 0 4px #ccc;
+  overflow: hidden;
+}
+
+/* 拖拽列样式 */
+.sortable-ghost {
+  opacity: .8;
+  color: #fff !important;
+  background: #42b983 !important;
+}
+
+.top-right-btn {
+  position: relative;
+  float: right;
+}
+
+/* ------------------------------
+   管理后台统一视觉增强（全局）
+   目标：不改业务逻辑，只优化常见页面观感
+------------------------------- */
+
+.main-container {
+  background: linear-gradient(180deg, #f5f8fc 0%, #f2f6fb 100%);
+}
+
+.app-main {
+  padding: 10px 12px 14px;
+}
+
+.app-container {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(1px);
+}
+
+.app-container .el-card {
+  border-radius: 12px;
+  border: 1px solid #e8eef6;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+}
+
+.app-container .el-card__header {
+  background: linear-gradient(180deg, #fafcff 0%, #f4f8ff 100%);
+  border-bottom: 1px solid #e9eef6;
+  padding: 13px 16px 10px;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
+.app-container .el-card__body {
+  padding: 16px 18px 18px 18px;
+}
+
+.app-container .el-input__inner,
+.app-container .el-textarea__inner {
+  border-radius: 10px;
+  border-color: #d8e3f0;
+  background: #fbfdff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-container .el-input__inner:focus,
+.app-container .el-textarea__inner:focus {
+  border-color: #2f75ff;
+  box-shadow: 0 0 0 3px rgba(47, 117, 255, 0.12);
+  background: #fff;
+}
+
+.app-container .el-form-item__label {
+  color: #3a4b63;
+  font-weight: 600;
+}
+
+.app-container .el-button {
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.app-container .el-button--primary {
+  background: linear-gradient(135deg, #2f75ff 0%, #4b8dff 100%);
+  border-color: #2f75ff;
+  box-shadow: 0 6px 16px rgba(47, 117, 255, 0.25);
+}
+
+.app-container .el-button--primary:hover,
+.app-container .el-button--primary:focus {
+  background: linear-gradient(135deg, #2367ea 0%, #3f82f6 100%);
+  border-color: #2367ea;
+}
+
+.app-container .el-button--primary.is-plain {
+  background: #eef4ff;
+  border-color: #a9c6ff;
+  color: #2f75ff;
+  box-shadow: none;
+}
+
+.app-container .el-button--primary.is-plain:hover,
+.app-container .el-button--primary.is-plain:focus {
+  background: #deebff;
+  border-color: #7ea8ff;
+  color: #1f5fe0;
+}
+
+.app-container .el-button--default {
+  background: #f3f6fb;
+  border-color: #d8e1ed;
+  color: #3a4b63;
+}
+
+.app-container .el-button--default:hover,
+.app-container .el-button--default:focus {
+  color: #2f75ff;
+  border-color: #9fc0ff;
+  background: #eef4ff;
+}
+
+.app-container .el-table {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e9eef6;
+}
+
+.app-container .el-table th.el-table__cell {
+  background: linear-gradient(180deg, #f8fbff 0%, #f1f6ff 100%);
+  color: #425466;
+  font-weight: 600;
+  height: 44px;
+}
+
+.app-container .el-table td.el-table__cell {
+  border-bottom: 1px solid #edf2f8;
+}
+
+.app-container .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background-color: #f7faff;
+}
+
+.app-container .el-pagination button,
+.app-container .el-pagination .el-pager li {
+  border-radius: 8px;
+}
+
+.app-container .el-dialog {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.2);
+}
+
+.app-container .el-dialog__header {
+  background: linear-gradient(180deg, #fafcff 0%, #f3f8ff 100%);
+  border-bottom: 1px solid #e9eef6;
+  padding: 16px 18px 12px;
+}
+
+.app-container .el-dialog__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
+.app-container .el-tabs__item.is-active {
+  color: #2f75ff;
+  font-weight: 600;
+}
+
+.app-container .el-tabs__active-bar {
+  background-color: #2f75ff;
+  height: 3px;
+  border-radius: 2px;
+}

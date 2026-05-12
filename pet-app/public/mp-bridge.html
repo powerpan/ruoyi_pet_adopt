@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>登录同步</title>
+  <script>
+    (function () {
+      var q = new URLSearchParams(window.location.search);
+      var token = q.get("token");
+      var redirect = q.get("redirect") || "/";
+      if (token) {
+        document.cookie =
+          "Admin-Token=" +
+          encodeURIComponent(token) +
+          ";path=/;SameSite=Lax;Max-Age=86400";
+      }
+      var dest;
+      if (/^https?:\/\//i.test(redirect)) {
+        dest = redirect;
+      } else {
+        var path = redirect.charAt(0) === "/" ? redirect : "/" + redirect;
+        // 与 ruoyi-app Vue Router hash 模式对齐：用 #/path 进入 SPA，避免请求 /path 被静态服务判为 404
+        if (path.indexOf("#") >= 0) {
+          dest = location.origin + (path.charAt(0) === "#" ? "/" : "") + path;
+        } else {
+          dest = location.origin + "/#" + path;
+        }
+      }
+      location.replace(dest);
+    })();
+  </script>
+</head>
+<body><p>正在进入页面…</p></body>
+</html>

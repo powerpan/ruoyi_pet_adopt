@@ -1,0 +1,31 @@
+import request from '@/utils/request'
+
+export const petApi = {
+  listProfiles: query => request({ url: '/manager/pet/profiles/list', method: 'get', params: query }),
+  updateProfile: data => request({ url: '/manager/pet/profiles', method: 'put', data }),
+  auditBlogger: data => request({ url: '/manager/pet/bloggers/audit', method: 'post', data }),
+  listPets: query => request({ url: '/manager/pet/pets/list', method: 'get', params: query }),
+  listTopics: query => request({ url: '/manager/pet/topics/list', method: 'get', params: query }),
+  addTopic: data => request({ url: '/manager/pet/topics', method: 'post', data }),
+  updateTopic: data => request({ url: '/manager/pet/topics', method: 'put', data }),
+  deleteTopic: id => request({ url: '/manager/pet/topics/' + id, method: 'delete' }),
+  listPosts: query => request({ url: '/manager/pet/posts/list', method: 'get', params: query }),
+  auditPost: data => request({ url: '/manager/pet/posts/audit', method: 'post', data }),
+  deletePost: id => request({ url: '/manager/pet/posts/' + id, method: 'delete' }),
+  listComments: query => request({ url: '/manager/pet/comments/list', method: 'get', params: query }),
+  auditComment: data => request({ url: '/manager/pet/comments/audit', method: 'post', data }),
+  listMerchants: query => request({ url: '/manager/pet/merchants/list', method: 'get', params: query }),
+  auditMerchant: data => request({ url: '/manager/pet/merchants/audit', method: 'post', data }),
+  listMerchantQualifications: (id, query) => request({ url: `/manager/pet/merchants/${id}/qualifications`, method: 'get', params: query }),
+  listServices: query => request({ url: '/manager/pet/services/list', method: 'get', params: query }),
+  addService: data => request({ url: '/manager/pet/services', method: 'post', data }),
+  updateService: data => request({ url: '/manager/pet/services', method: 'put', data }),
+  deleteService: id => request({ url: '/manager/pet/services/' + id, method: 'delete' }),
+  listServiceRequests: query => request({ url: '/manager/pet/service-requests/list', method: 'get', params: query }),
+  updateServiceRequestStatus: data => request({ url: '/manager/pet/service-requests/status', method: 'put', data }),
+  listReviews: query => request({ url: '/manager/pet/reviews/list', method: 'get', params: query }),
+  auditReview: data => request({ url: '/manager/pet/reviews/audit', method: 'post', data }),
+  listHealthRecords: query => request({ url: '/manager/pet/health-records/list', method: 'get', params: query }),
+  listReminders: query => request({ url: '/manager/pet/reminders/list', method: 'get', params: query }),
+  overview: () => request({ url: '/manager/pet/statistics/overview', method: 'get' })
+}

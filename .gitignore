@@ -1,0 +1,32 @@
+*.log
+*.class
+*.jar
+*.war
+*.ear
+*.DS_Store
+
+# Maven / build outputs
+**/target/
+**/dist/
+
+# Frontend dependencies
+**/node_modules/
+
+# IDE and local workspace files
+.idea/
+.vscode/
+workspace.xml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.local
+
+# Local runtime files
+logs/
+.dev-logs/
+db-backups/
+deploy/.env
+uploadPath/
+.codex/
+.agents/

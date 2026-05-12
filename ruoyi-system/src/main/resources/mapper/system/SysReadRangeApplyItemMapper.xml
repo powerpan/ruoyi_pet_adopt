@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.SysReadRangeApplyItemMapper">
+
+    <resultMap type="SysReadRangeApplyItem" id="SysReadRangeApplyItemResult">
+        <result property="applyId" column="apply_id"/>
+        <result property="typeId" column="type_id"/>
+        <result property="reqAllowPreview" column="req_allow_preview"/>
+        <result property="reqAllowDownload" column="req_allow_download"/>
+        <result property="auditAllowPreview" column="audit_allow_preview"/>
+        <result property="auditAllowDownload" column="audit_allow_download"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <select id="selectItemsByApplyId" parameterType="Long" resultMap="SysReadRangeApplyItemResult">
+        select
+            apply_id, type_id,
+            req_allow_preview, req_allow_download,
+            audit_allow_preview, audit_allow_download,
+            create_by, create_time, update_by, update_time, remark
+        from sys_read_range_apply_item
+        where apply_id = #{applyId}
+        order by type_id
+    </select>
+
+    <insert id="insertSysReadRangeApplyItem" parameterType="SysReadRangeApplyItem">
+        insert into sys_read_range_apply_item (
+            apply_id,
+            type_id,
+            req_allow_preview,
+            req_allow_download,
+            audit_allow_preview,
+            audit_allow_download,
+            create_by,
+            remark,
+            create_time,
+            update_time
+        ) values (
+            #{applyId},
+            #{typeId},
+            #{reqAllowPreview},
+            #{reqAllowDownload},
+            #{auditAllowPreview},
+            #{auditAllowDownload},
+            <if test="createBy != null and createBy != ''">#{createBy}</if><if test="createBy == null or createBy == ''">''</if>,
+            <if test="remark != null and remark != ''">#{remark}</if><if test="remark == null or remark == ''">NULL</if>,
+            sysdate(),
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateAuditSysReadRangeApplyItem" parameterType="SysReadRangeApplyItem">
+        update sys_read_range_apply_item
+        <set>
+            audit_allow_preview = #{auditAllowPreview},
+            audit_allow_download = #{auditAllowDownload},
+            update_by = #{updateBy},
+            update_time = sysdate()
+        </set>
+        where apply_id = #{applyId} and type_id = #{typeId}
+    </update>
+
+</mapper>
+

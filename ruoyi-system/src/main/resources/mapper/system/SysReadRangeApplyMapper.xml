@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.SysReadRangeApplyMapper">
+
+    <resultMap type="SysReadRangeApply" id="SysReadRangeApplyResult">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="requestPreviewAll" column="request_preview_all"/>
+        <result property="requestDownloadAll" column="request_download_all"/>
+        <result property="applyUserNote" column="apply_user_note"/>
+        <result property="status" column="status"/>
+        <result property="reviewBy" column="review_by"/>
+        <result property="reviewTime" column="review_time"/>
+        <result property="reviewRejectReason" column="review_reject_reason"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="selectSysReadRangeApplyVo">
+        select a.id, a.user_id, u.nick_name as nick_name,
+               a.request_preview_all, a.request_download_all, a.apply_user_note, a.status, a.review_by, a.review_time,
+               a.review_reject_reason,
+               a.create_by, a.create_time, a.update_by, a.update_time, a.remark
+        from sys_read_range_apply a
+        left join sys_user u on u.user_id = a.user_id
+    </sql>
+
+    <select id="selectSysReadRangeApplyById" parameterType="Long" resultMap="SysReadRangeApplyResult">
+        <include refid="selectSysReadRangeApplyVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectSysReadRangeApplyList" parameterType="SysReadRangeApply" resultMap="SysReadRangeApplyResult">
+        <include refid="selectSysReadRangeApplyVo"/>
+        <where>
+            <if test="userId != null"> and a.user_id = #{userId}</if>
+            <if test="status != null"> and a.status = #{status}</if>
+            <if test="params != null and params.beginTime != null and params.beginTime != ''">
+                and date_format(a.create_time,'%y%m%d') &gt;= date_format(#{params.beginTime},'%y%m%d')
+            </if>
+            <if test="params != null and params.endTime != null and params.endTime != ''">
+                and date_format(a.create_time,'%y%m%d') &lt;= date_format(#{params.endTime},'%y%m%d')
+            </if>
+        </where>
+        order by a.create_time desc
+    </select>
+
+    <insert id="insertSysReadRangeApply" parameterType="SysReadRangeApply" useGeneratedKeys="true" keyProperty="id">
+        insert into sys_read_range_apply
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="requestPreviewAll != null">request_preview_all,</if>
+            <if test="requestDownloadAll != null">request_download_all,</if>
+            <if test="applyUserNote != null and applyUserNote != ''">apply_user_note,</if>
+            <if test="status != null">status,</if>
+            <if test="reviewBy != null">review_by,</if>
+            <if test="reviewTime != null">review_time,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="updateBy != null and updateBy != ''">update_by,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            create_time,
+            update_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="requestPreviewAll != null">#{requestPreviewAll},</if>
+            <if test="requestDownloadAll != null">#{requestDownloadAll},</if>
+            <if test="applyUserNote != null and applyUserNote != ''">#{applyUserNote},</if>
+            <if test="status != null">#{status},</if>
+            <if test="reviewBy != null">#{reviewBy},</if>
+            <if test="reviewTime != null">#{reviewTime},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="updateBy != null and updateBy != ''">#{updateBy},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            sysdate(),
+            sysdate()
+        </trim>
+    </insert>
+
+    <update id="updateSysReadRangeApply" parameterType="SysReadRangeApply">
+        update sys_read_range_apply
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="status != null">status = #{status},</if>
+            <if test="reviewBy != null">review_by = #{reviewBy},</if>
+            <if test="reviewTime != null">review_time = #{reviewTime},</if>
+            <if test="reviewRejectReason != null">review_reject_reason = #{reviewRejectReason},</if>
+            <if test="params != null and params.clearReviewRejectReason != null and params.clearReviewRejectReason == true">
+                review_reject_reason = NULL,
+            </if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate(),
+            <if test="remark != null and remark != ''">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <select id="selectLatestCreateTimeByUserId" resultType="java.util.Date">
+        select max(create_time) from sys_read_range_apply where user_id = #{userId}
+    </select>
+
+    <select id="selectAppTypeIdsByBusiness" parameterType="String" resultType="Long">
+        select id from app_type where business = #{business}
+    </select>
+
+    <select id="selectLeafTypeIdsByBusiness" parameterType="String" resultType="Long">
+        select t.id from app_type t
+        where t.business = #{business}
+          and not exists (select 1 from app_type c where c.parent_id = t.id)
+    </select>
+
+    <select id="selectLeafTypeIdsByBusinessAndTypeKey" resultType="Long">
+        select t.id from app_type t
+        where t.business = #{business}
+          and t.type_key = #{typeKey}
+          and not exists (select 1 from app_type c where c.parent_id = t.id)
+    </select>
+
+</mapper>
+

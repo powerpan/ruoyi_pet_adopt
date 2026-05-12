@@ -1,0 +1,14 @@
+.git
+.idea
+.vscode
+.DS_Store
+
+**/node_modules
+**/target
+**/dist
+
+logs
+.dev-logs
+db-backups
+uploadPath
+deploy/.env

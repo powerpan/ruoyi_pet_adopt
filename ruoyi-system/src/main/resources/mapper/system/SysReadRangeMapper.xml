@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.SysReadRangeMapper">
+
+    <resultMap type="SysReadRange" id="SysReadRangeResult">
+        <result property="userId"    column="user_id"    />
+        <result property="typeId"    column="type_id"    />
+        <result property="allowPreview"    column="allow_preview"    />
+        <result property="allowDownload"    column="allow_download"    />
+    </resultMap>
+
+    <sql id="selectSysReadRangeVo">
+        select user_id, type_id, allow_preview, allow_download from sys_read_range
+    </sql>
+
+    <select id="selectSysReadRangeList" parameterType="SysReadRange" resultMap="SysReadRangeResult">
+        <include refid="selectSysReadRangeVo"/>
+        <where>
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="typeId != null "> and type_id = #{typeId}</if>
+        </where>
+    </select>
+
+    <select id="selectSysReadRangeById" parameterType="SysReadRange" resultMap="SysReadRangeResult">
+        <include refid="selectSysReadRangeVo"/>
+        where user_id = #{userId} and type_id = #{typeId}
+    </select>
+
+    <insert id="insertSysReadRange" parameterType="SysReadRange">
+        insert into sys_read_range
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="typeId != null">type_id,</if>
+            <if test="allowPreview != null">allow_preview,</if>
+            <if test="allowDownload != null">allow_download,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="typeId != null">#{typeId},</if>
+            <if test="allowPreview != null">#{allowPreview},</if>
+            <if test="allowDownload != null">#{allowDownload},</if>
+        </trim>
+    </insert>
+
+    <update id="updateSysReadRange" parameterType="SysReadRange">
+        update sys_read_range
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="allowPreview != null">allow_preview = #{allowPreview},</if>
+            <if test="allowDownload != null">allow_download = #{allowDownload},</if>
+        </trim>
+        where user_id = #{userId} and type_id = #{typeId}
+    </update>
+
+    <delete id="deleteSysReadRangeById" parameterType="SysReadRange">
+        delete from sys_read_range where user_id = #{userId} and type_id = #{typeId}
+    </delete>
+
+    <!-- 表无主键 id；批量按 id 删除无法安全映射，保留接口避免编译问题，实际不删除任何行 -->
+    <delete id="deleteSysReadRangeByIds">
+        delete from sys_read_range where 1 = 0
+    </delete>
+</mapper>
