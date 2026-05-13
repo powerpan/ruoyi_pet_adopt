@@ -15,10 +15,34 @@
 }
 
 .pet-admin-title {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  overflow: hidden;
+}
+
+.pet-admin-title::after {
+  content: "POWERPAN";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  z-index: 0;
+  transform: translateY(-50%) rotate(-8deg);
+  color: rgba(18, 86, 78, .05);
+  font-size: 54px;
+  font-weight: 300;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pet-admin-title > * {
+  position: relative;
+  z-index: 1;
 }
 
 .pet-admin-title h2 {
@@ -143,6 +167,11 @@
 
   .pet-admin-title {
     display: grid;
+  }
+
+  .pet-admin-title::after {
+    right: 0;
+    font-size: 40px;
   }
 
   .pet-stat-grid {
