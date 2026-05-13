@@ -59,7 +59,7 @@ export default {
       query: { pageNum: 1, pageSize: 10, status: '' },
       statusOptions: [
         { label: '待处理', value: 0 },
-        { label: '接受预约', value: 1 },
+        { label: '已接受', value: 1 },
         { label: '已完成', value: 2 },
         { label: '已取消', value: 3 }
       ]
@@ -90,7 +90,7 @@ export default {
       })
     },
     statusLabel(status) {
-      return ({ 0: '待处理', 1: '接受预约', 2: '已完成', 3: '已取消' })[status] || '待处理'
+      return ({ 0: '待处理', 1: '已接受', 2: '已完成', 3: '已取消' })[status] || '待处理'
     },
     statusType(status) {
       return ({ 1: 'primary', 2: 'success', 3: 'info' })[status] || 'warning'

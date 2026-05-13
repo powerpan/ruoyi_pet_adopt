@@ -809,6 +809,9 @@ public class PetAppController extends BaseController {
             if (review.getHideStatus() != null && review.getHideStatus() == 2) {
                 return R.fail("已屏蔽评价不能置顶");
             }
+            if (review.getHideStatus() != null && review.getHideStatus() == 1) {
+                return R.fail("屏蔽审核中的评价不能置顶");
+            }
         }
         UpdateWrapper<PetServiceReview> update = new UpdateWrapper<PetServiceReview>()
                 .eq("id", reviewId)
@@ -1246,6 +1249,9 @@ public class PetAppController extends BaseController {
         if (pet == null || pet.getStatus() == null || pet.getStatus() == 4) {
             return R.fail("待领养宠物不存在或已完成领养");
         }
+        if (!canTransitionAdoptionApplication(exists.getStatus(), application.getStatus())) {
+            return R.fail("当前申请状态不能更新为「" + adoptionApplicationStatusText(application.getStatus()) + "」");
+        }
         if (application.getStatus() != null && application.getStatus() == 5) {
             if (exists.getStatus() == null || (exists.getStatus() != 1 && exists.getStatus() != 5)) {
                 return R.fail("请先进入沟通，再安排看宠");
@@ -1292,13 +1298,11 @@ public class PetAppController extends BaseController {
                 throw new ServiceException("宠物状态已变化，请刷新后重试");
             }
         } else if (exists.getStatus() != null && exists.getStatus() == 5) {
-            if (application.getStatus() != null && application.getStatus() == 1) {
-                adoptionApplicationMapper.update(null, new UpdateWrapper<PetAdoptionApplication>()
-                        .eq("id", exists.getId())
-                        .eq("status", 1)
-                        .set("visit_time", null)
-                        .set("visit_address", ""));
-            }
+            adoptionApplicationMapper.update(null, new UpdateWrapper<PetAdoptionApplication>()
+                    .eq("id", exists.getId())
+                    .eq("status", application.getStatus())
+                    .set("visit_time", null)
+                    .set("visit_address", ""));
             refreshAdoptionReservationState(pet.getId());
         }
         notificationService.create(exists.getApplicantUserId(), SecurityUtils.getUserId(), "adoption_application_status", "adoption_application",
@@ -1368,6 +1372,8 @@ public class PetAppController extends BaseController {
                 .eq("applicant_user_id", userId)
                 .eq("status", exists.getStatus())
                 .set("status", 4)
+                .set("visit_time", null)
+                .set("visit_address", "")
                 .set("review_reason", "申请人主动撤回")
                 .set("update_by", SecurityUtils.getUsername())
                 .set("update_time", now));
@@ -1933,6 +1939,28 @@ public class PetAppController extends BaseController {
         return status != null && (status == 1 || status == 2 || status == 3 || status == 5 || status == 7);
     }
 
+    private boolean canTransitionAdoptionApplication(Integer currentStatus, Integer nextStatus) {
+        if (currentStatus == null || nextStatus == null || isTerminalAdoptionApplication(currentStatus)) {
+            return false;
+        }
+        if (nextStatus == 1) {
+            return currentStatus == 0 || currentStatus == 5;
+        }
+        if (nextStatus == 2) {
+            return currentStatus == 0 || currentStatus == 1;
+        }
+        if (nextStatus == 3) {
+            return currentStatus == 0 || currentStatus == 1 || currentStatus == 2 || currentStatus == 5;
+        }
+        if (nextStatus == 5) {
+            return currentStatus == 1 || currentStatus == 5;
+        }
+        if (nextStatus == 7) {
+            return currentStatus == 1 || currentStatus == 2 || currentStatus == 5;
+        }
+        return false;
+    }
+
     private boolean isTerminalAdoptionApplication(Integer status) {
         return status != null && (status == 3 || status == 4 || status == 6 || status == 7);
     }
@@ -1954,6 +1982,25 @@ public class PetAppController extends BaseController {
             return "领养申请已关闭";
         }
         return "领养申请状态已更新";
+    }
+
+    private String adoptionApplicationStatusText(Integer status) {
+        if (status != null && status == 1) {
+            return "沟通中";
+        }
+        if (status != null && status == 2) {
+            return "待补充";
+        }
+        if (status != null && status == 3) {
+            return "拒绝";
+        }
+        if (status != null && status == 5) {
+            return "已约看宠";
+        }
+        if (status != null && status == 7) {
+            return "已关闭";
+        }
+        return "未知";
     }
 
     private String defaultReviewReason(String reason, String fallback) {
@@ -2171,7 +2218,7 @@ public class PetAppController extends BaseController {
 
     private String requestStatusText(Integer status) {
         if (status != null && status == 1) {
-            return "接受预约";
+            return "已接受";
         }
         if (status != null && status == 2) {
             return "已完成";

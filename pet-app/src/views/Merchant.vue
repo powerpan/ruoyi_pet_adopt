@@ -222,6 +222,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="content" label="评价内容" min-width="220" show-overflow-tooltip />
+        <el-table-column label="操作" width="170">
+          <template slot-scope="scope">
+            <el-button size="mini" type="text" :disabled="!canTopReview(scope.row)" @click="toggleTopReview(scope.row)">{{ scope.row.topFlag === 1 ? '取消置顶' : '置顶' }}</el-button>
+            <el-button size="mini" type="text" :disabled="!canRequestHide(scope.row)" @click="openHideRequest(scope.row)">申请屏蔽</el-button>
+          </template>
+        </el-table-column>
         <el-table-column label="屏蔽状态" width="120">
           <template slot-scope="scope">
             <el-tag size="mini" :type="hideStatusTag(scope.row.hideStatus)">{{ hideStatusLabel(scope.row.hideStatus) }}</el-tag>
@@ -229,12 +235,6 @@
         </el-table-column>
         <el-table-column prop="hideReason" label="申请理由" min-width="180" show-overflow-tooltip />
         <el-table-column prop="hideAuditReason" label="审核意见" min-width="180" show-overflow-tooltip />
-        <el-table-column label="操作" width="170">
-          <template slot-scope="scope">
-            <el-button size="mini" type="text" :disabled="!canTopReview(scope.row)" @click="toggleTopReview(scope.row)">{{ scope.row.topFlag === 1 ? '取消置顶' : '置顶' }}</el-button>
-            <el-button size="mini" type="text" :disabled="!canRequestHide(scope.row)" @click="openHideRequest(scope.row)">申请屏蔽</el-button>
-          </template>
-        </el-table-column>
       </el-table>
     </el-dialog>
 
@@ -338,7 +338,7 @@ export default {
       ],
       requestStatusOptions: [
         { label: '待处理', value: 0 },
-        { label: '接受预约', value: 1 },
+        { label: '已接受', value: 1 },
         { label: '已完成', value: 2 },
         { label: '已取消', value: 3 }
       ]
@@ -542,7 +542,7 @@ export default {
       return row && Number(row.status) === 1 && ![1, 2].includes(Number(row.hideStatus || 0))
     },
     canTopReview(row) {
-      return row && Number(row.status) === 1 && Number(row.hideStatus || 0) !== 2 && Number(row.rating || 0) >= 4
+      return row && Number(row.status) === 1 && ![1, 2].includes(Number(row.hideStatus || 0)) && Number(row.rating || 0) >= 4
     },
     toggleTopReview(row) {
       if (!this.canTopReview(row)) {
@@ -617,7 +617,7 @@ export default {
       return item ? item.label : (value || '综合服务')
     },
     requestStatus(status) {
-      return ({ 0: '待处理', 1: '接受预约', 2: '已完成', 3: '已取消' })[status] || '待处理'
+      return ({ 0: '待处理', 1: '已接受', 2: '已完成', 3: '已取消' })[status] || '待处理'
     },
     requestTag(status) {
       return ({ 1: 'primary', 2: 'success', 3: 'info' })[status] || 'warning'
